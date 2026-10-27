@@ -14,6 +14,21 @@ A Hermes Profile Distribution that turns `tradermonty/claude-trading-skills` int
 
 ---
 
+## Companion visualization dashboard (`webapp/`)
+
+The repository also ships `webapp/`, a standalone cinematic web dashboard — the
+**Hermes Neural Self-Learning AI Trading Brain** — that visualises an SMC/ICT
+research workflow (structural zones, hidden-indicator confluence heatmaps,
+predictive Time-Machine paths, Monte Carlo trees, a genetic strategy hatchery
+and option Greeks telemetry). It is a **local, fully simulated research/UI
+prototype**: market data comes from an in-browser feed adapter that mirrors
+Binance/yfinance WebSocket shapes, and nothing routes orders to a live broker.
+See [`webapp/README.md`](webapp/README.md) for its architecture, the
+`FeedAdapter` swap points for real data, and run instructions (`npm install &&
+npm run dev`).
+
+---
+
 ## Quick Start (5 minutes)
 
 ### Easiest path: ask Hermes to install it

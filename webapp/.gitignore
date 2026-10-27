@@ -1,0 +1,7 @@
+node_modules/
+dist/
+*.local
+scripts/.smoke.mjs
+scripts/.life.mjs
+scripts/.bt.mjs
+stats.html
