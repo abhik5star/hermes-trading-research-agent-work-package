@@ -24,8 +24,9 @@ and option Greeks telemetry). It is a **local, fully simulated research/UI
 prototype**: market data comes from an in-browser feed adapter that mirrors
 Binance/yfinance WebSocket shapes, and nothing routes orders to a live broker.
 See [`webapp/README.md`](webapp/README.md) for its architecture, the
-`FeedAdapter` swap points for real data, and run instructions (`npm install &&
-npm run dev`).
+`FeedAdapter` swap points for real data, and run instructions. On Windows,
+double-click **`START-HERE.bat`** at the repo root for a one-click
+install-and-launch (Node.js 18+ required).
 
 ---
 

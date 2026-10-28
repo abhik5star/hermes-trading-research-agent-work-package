@@ -31,12 +31,21 @@ node --experimental-strip-types scripts/smoke.ts   # headless engine smoke test
 
 ### Windows one-click launchers
 
-- **`start-dashboard.bat`** — double-click to install dependencies (first run
-  only), start the dev server, and open `http://localhost:5173` automatically.
-- **`build-dashboard.bat`** — type-checks, builds the production bundle, and
-  serves it on `http://localhost:4173` via `npm run preview`.
+- **`START-HERE.bat` (repo root)** — the only file a non-technical user needs.
+  Double-click and it checks Node.js, installs **all** dependencies on first
+  run (cached afterwards), starts the server, and opens
+  `http://localhost:5173` in the browser automatically.
+- **`webapp/setup-dashboard.bat`** — full install plus verification
+  (`npm install` → type-check → production build) for a fresh PC or after
+  pulling new code.
+- **`webapp/start-dashboard.bat`** — install-if-needed then dev server +
+  browser open.
+- **`webapp/build-dashboard.bat`** — type-checks, builds the production
+  bundle, and serves it on `http://localhost:4173`.
 
-Both check for Node.js first and pause on error so the window stays readable.
+All `.bat` files use CRLF (pinned via `.gitattributes`) and pause on error so
+the window stays readable. The only prerequisite is Node.js 18+ from
+<https://nodejs.org>.
 
 ## Architecture
 
