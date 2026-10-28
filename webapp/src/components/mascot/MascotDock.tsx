@@ -3,17 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Send, MessageCircle, X } from 'lucide-react';
 import { useStore, brain } from '../../state/store';
 import { FalconMascot } from './FalconMascot';
-import { Chip } from '../ui/Primitives';
-import type { MascotMood } from '../../engine/types';
-
-const MOOD_LABEL: Record<MascotMood, { label: string; tone: 'green' | 'red' | 'amber' | 'violet' | 'cyan' }> = {
-  idle: { label: 'Scanning — Idle', tone: 'cyan' },
-  sleeping: { label: 'Sleeping — dead market', tone: 'cyan' },
-  happy: { label: 'Happy — targets hit', tone: 'green' },
-  angry: { label: 'Angry — defensive posture', tone: 'red' },
-  zen: { label: 'Zen meditation — guard active', tone: 'violet' },
-  alert: { label: 'Hyper-alert armor stance', tone: 'amber' },
-};
+import { MOOD_META } from './moods';
+import { cn } from '../../utils/cn';
 
 function useTypewriter(text: string, speed = 18) {
   const [out, setOut] = useState('');
@@ -30,6 +21,30 @@ function useTypewriter(text: string, speed = 18) {
   return out;
 }
 
+/** Floating mood emojis that drift above the 3D falcon. */
+function MoodEmojis({ mood }: { mood: keyof typeof MOOD_META }) {
+  const emojis = MOOD_META[mood].emojis;
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden">
+      <AnimatePresence mode="popLayout">
+        {emojis.map((e, i) => (
+          <motion.span
+            key={`${mood}-${i}-${e}`}
+            initial={{ opacity: 0, y: 18, scale: 0.6, rotate: -12 }}
+            animate={{ opacity: [0, 1, 1, 0], y: [-6, -34, -58], scale: [0.7, 1.15, 1], rotate: 10 }}
+            exit={{ opacity: 0, scale: 0.5 }}
+            transition={{ duration: 3.4, repeat: Infinity, delay: i * 0.9, ease: 'easeOut' }}
+            className="absolute text-2xl drop-shadow-[0_0_12px_rgba(56,232,255,0.5)]"
+            style={{ right: `${18 + i * 14}%`, top: '34%' }}
+          >
+            {e}
+          </motion.span>
+        ))}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 export function MascotDock() {
   const snapshot = useStore((s) => s.snapshot);
   const chatOpen = useStore((s) => s.chatOpen);
@@ -44,7 +59,7 @@ export function MascotDock() {
   }, [snapshot?.chat.length]);
 
   if (!snapshot) return null;
-  const mood = MOOD_LABEL[snapshot.mood];
+  const meta = MOOD_META[snapshot.mood];
 
   const send = () => {
     const q = input.trim();
@@ -60,11 +75,34 @@ export function MascotDock() {
           <h3 className="text-[0.95rem] font-semibold">Cybernetic Falcon</h3>
           <p className="text-xs dim">Autonomous neural mascot · Hinglish/English</p>
         </div>
-        <Chip tone={mood.tone}>{mood.label}</Chip>
+        <AnimatePresence mode="wait">
+          <motion.span
+            key={snapshot.mood}
+            initial={{ scale: 0.7, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.7, opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 18 }}
+            className="chip"
+            style={{ color: meta.color, borderColor: `${meta.color}55`, background: `${meta.color}14` }}
+          >
+            <span className="w-1.5 h-1.5 rounded-full breathe" style={{ background: meta.color, boxShadow: `0 0 8px ${meta.color}` }} />
+            {meta.label} · {meta.hindi}
+          </motion.span>
+        </AnimatePresence>
       </header>
 
       <div className="relative">
         <FalconMascot mood={snapshot.mood} />
+        <MoodEmojis mood={snapshot.mood} />
+        {/* Mood blurb */}
+        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10">
+          <span
+            className="text-[0.62rem] tracking-[0.18em] uppercase px-3 py-1 rounded-full whitespace-nowrap"
+            style={{ color: meta.color, background: 'rgba(5,8,16,0.6)', border: `1px solid ${meta.color}44`, backdropFilter: 'blur(8px)' }}
+          >
+            {meta.blurb}
+          </span>
+        </div>
         {/* Speech bubble */}
         <AnimatePresence mode="wait">
           <motion.div
@@ -72,12 +110,12 @@ export function MascotDock() {
             initial={{ opacity: 0, y: 8, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -6 }}
-            className="absolute top-3 left-4 right-4 glass-strong rounded-2xl p-3 text-xs leading-relaxed"
-            style={{ borderLeft: '2px solid var(--accent)' }}
+            className="absolute top-3 left-4 right-4 glass-strong rounded-2xl p-3 text-xs leading-relaxed z-20"
+            style={{ borderLeft: `2px solid ${meta.color}` }}
           >
             <span className="dim mr-1.5">Falcon:</span>
             {typed}
-            <span className="inline-block w-1.5 h-3.5 ml-0.5 align-middle bg-[var(--accent)] breathe" />
+            <span className="inline-block w-1.5 h-3.5 ml-0.5 align-middle breathe" style={{ background: meta.color }} />
           </motion.div>
         </AnimatePresence>
       </div>
@@ -85,7 +123,7 @@ export function MascotDock() {
       <div className="px-4 pb-4">
         <button
           onClick={() => toggleChat()}
-          className="btn-ghost w-full py-2 text-xs flex items-center justify-center gap-2"
+          className={cn('btn-ghost w-full py-2 text-xs flex items-center justify-center gap-2')}
         >
           {chatOpen ? <X size={13} /> : <MessageCircle size={13} />}
           {chatOpen ? 'Close bilingual chat' : 'Talk to the Falcon'}
@@ -103,11 +141,12 @@ export function MascotDock() {
                 {snapshot.chat.map((line) => (
                   <div key={line.id} className={`flex ${line.from === 'user' ? 'justify-end' : 'justify-start'}`}>
                     <div
-                      className={`max-w-[85%] px-3 py-2 rounded-2xl text-[0.74rem] leading-relaxed ${
+                      className={cn(
+                        'max-w-[85%] px-3 py-2 rounded-2xl text-[0.74rem] leading-relaxed',
                         line.from === 'user'
                           ? 'bg-[var(--accent-soft)] rounded-br-sm'
-                          : 'bg-white/[0.05] rounded-bl-sm border border-white/10'
-                      }`}
+                          : 'bg-white/[0.05] rounded-bl-sm border border-white/10',
+                      )}
                     >
                       {line.text}
                     </div>

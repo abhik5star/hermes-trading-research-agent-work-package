@@ -109,5 +109,5 @@ export function detectGammaBlast(rows: GreekRow[]): { blast: boolean; score: num
       strike = r.strike;
     }
   }
-  return { blast: best > 0.72, score: Math.min(1, best), strike };
+  return { blast: best > 0.82, score: Math.min(1, best), strike };
 }

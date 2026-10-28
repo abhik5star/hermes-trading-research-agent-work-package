@@ -22,7 +22,7 @@ export function CommandView() {
         <div className="xl:col-span-8 space-y-4">
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-3">
-              <h2 className="text-xl font-semibold">{inst.display}</h2>
+              <h2 className="text-xl font-semibold heading-accent">{inst.display}</h2>
               <Chip tone={inst.exchange === 'NSE' ? 'amber' : 'violet'}>
                 {inst.exchange} · {inst.vehicle.toUpperCase()}
               </Chip>

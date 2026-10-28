@@ -20,7 +20,7 @@ export function TopBar() {
             <span className="absolute inset-0 rounded-2xl pulse-ring" />
           </div>
           <div className="leading-tight">
-            <p className="font-semibold tracking-wide">HERMES NEURAL</p>
+            <p className="font-semibold tracking-wide text-gradient">HERMES NEURAL</p>
             <p className="text-[0.62rem] dim tracking-[0.28em] uppercase">Self-Learning Trading Brain</p>
           </div>
         </div>

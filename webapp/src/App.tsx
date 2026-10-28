@@ -11,6 +11,8 @@ import { DeckView } from './views/DeckView';
 import { ZenOverlay } from './components/ZenOverlay';
 import { RiskLockdownBanner } from './components/nav/RiskLockdownBanner';
 import { StatusFooter } from './components/nav/StatusFooter';
+import { ToastStack } from './components/nav/ToastStack';
+import { AmbientBackground } from './components/AmbientBackground';
 import { BrainCircuit } from 'lucide-react';
 
 /** Wires Zen Guard interaction telemetry (erratic mouse + tab thrashing). */
@@ -83,6 +85,7 @@ export default function App() {
   return (
     <div className="h-screen flex flex-col">
       <BehaviorProbe />
+      <AmbientBackground />
       <AmbientFlash />
       <TopBar />
 
@@ -108,7 +111,8 @@ export default function App() {
       </div>
 
       <StatusFooter />
-      <div className="fixed inset-0 grid-overlay pointer-events-none z-0" />
+      <div className="fixed inset-0 grid-overlay pointer-events-none z-[1]" />
+      <ToastStack />
       <RiskLockdownBanner />
       <ZenOverlay />
     </div>

@@ -266,7 +266,7 @@ export function HatcheryView() {
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-xl font-semibold flex items-center gap-2">
+        <h2 className="text-xl font-semibold heading-accent flex items-center gap-2">
           <Dna size={19} className="text-neon-violet" /> AI Strategy Hatchery & Lab
         </h2>
         <p className="text-xs dim mt-1">

@@ -11,7 +11,7 @@ export function LearningView() {
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-xl font-semibold flex items-center gap-2">
+        <h2 className="text-xl font-semibold heading-accent flex items-center gap-2">
           <BookOpenText size={19} className="neon-text" /> AI Brain Learning Log & Post-Mortem Panel
         </h2>
         <p className="text-xs dim mt-1">Every closed trade becomes a structured mistake → correction → new probability lesson</p>

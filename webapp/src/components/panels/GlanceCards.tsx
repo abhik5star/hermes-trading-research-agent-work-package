@@ -53,11 +53,16 @@ export function GlanceCards() {
             initial={{ opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.08 }}
-            className="glass rounded-3xl p-4 relative overflow-hidden"
+            className="glass lift rounded-3xl p-5 relative overflow-hidden"
           >
-            <div className="absolute -right-6 -top-6 w-24 h-24 rounded-full blur-2xl" style={{ background: `${c.tone}33` }} />
-            <div className="flex items-center gap-2 mb-2">
-              <Icon size={15} style={{ color: c.tone }} />
+            <div className="absolute -right-6 -top-6 w-28 h-28 rounded-full blur-2xl" style={{ background: `${c.tone}33` }} />
+            <div className="flex items-center gap-2.5 mb-2.5">
+              <span
+                className="w-8 h-8 rounded-xl grid place-items-center"
+                style={{ background: `${c.tone}1c`, border: `1px solid ${c.tone}44`, boxShadow: `0 0 14px ${c.tone}2e` }}
+              >
+                <Icon size={15} style={{ color: c.tone }} />
+              </span>
               <span className="hud-label">{c.label}</span>
             </div>
             {c.body}

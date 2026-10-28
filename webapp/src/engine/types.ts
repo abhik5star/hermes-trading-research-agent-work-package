@@ -10,7 +10,7 @@ export type OptionKind = 'CE' | 'PE';
 
 export type AppMode = 'backtest' | 'paper' | 'live' | 'timemachine';
 export type Regime = 'trend' | 'sideways' | 'whale-breakout';
-export type MascotMood = 'idle' | 'sleeping' | 'happy' | 'angry' | 'zen' | 'alert';
+export type MascotMood = 'idle' | 'sleeping' | 'happy' | 'celebrating' | 'sad' | 'angry' | 'zen' | 'alert' | 'thinking';
 export type Side = 'BUY' | 'SELL' | 'HOLD';
 
 export interface Instrument {

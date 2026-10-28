@@ -102,3 +102,26 @@ No component or engine module outside `marketFeed.ts` needs to change.
 > All P&L, order flow and predictions are simulated locally. The system is a
 > research/visualisation platform — autonomous routing to a live broker requires
 > a separately approved execution adapter and human decision gates.
+
+## Emotion engine & event popups
+
+The cybernetic falcon runs a nine-state emotion state machine
+(`engine/brain.ts` → `updateMoodAndTheme`, metadata in
+`components/mascot/moods.ts`):
+
+| Mood | Trigger |
+| --- | --- |
+| `sleeping` 😴 | No open positions and no high-signal events for ~28s (auto power-nap, Deep-Focus-Grey theme) |
+| `thinking` 🤔 | Confluence sitting in the 45–68 evaluation band |
+| `happy` 😊 | Open positions running in profit |
+| `celebrating` 🎉 | Fresh winning trade closed (victory spin + hop) |
+| `sad` 😢 | Losing trade closed (drooping eyelids, falling tear, reflection in chat) |
+| `angry` 💢 | Daily drawdown pressure beyond −1.2% |
+| `alert` ⚡ | Time-boxed whale/γ-blast burst with hysteresis (never latches) |
+| `zen` 🧘 | Zen Guard revenge-trading lockout |
+| `idle` 🛰️ | Default structural scanning |
+
+Every brain event (fills, stops, whales, gamma blasts, hedges, promotions,
+panic) also raises a spring-shaken toast via `components/nav/ToastStack.tsx` —
+slides in from the right with an overshoot shake, Hinglish quip per tone,
+lifetime progress bar, and auto-dismiss after 7s.

@@ -108,17 +108,51 @@ body {
 
 @layer components {
   .glass {
-    background: var(--panel);
+    position: relative;
+    background:
+      linear-gradient(160deg, rgba(255, 255, 255, 0.065), rgba(255, 255, 255, 0.025) 45%, rgba(255, 255, 255, 0.045)),
+      var(--panel);
     border: 1px solid var(--panel-border);
-    backdrop-filter: blur(22px) saturate(140%);
-    -webkit-backdrop-filter: blur(22px) saturate(140%);
-    box-shadow: 0 8px 40px rgba(2, 6, 18, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(22px) saturate(150%);
+    -webkit-backdrop-filter: blur(22px) saturate(150%);
+    box-shadow: 0 8px 40px rgba(2, 6, 18, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  }
+  /* premium gradient hairline across the top edge of cards */
+  .glass::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(140deg, rgba(255, 255, 255, 0.22), transparent 35%, transparent 70%, var(--accent-soft));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
   }
   .glass-strong {
     background: rgba(13, 20, 38, 0.72);
     border: 1px solid rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(30px) saturate(150%);
     -webkit-backdrop-filter: blur(30px) saturate(150%);
+  }
+  /* keep card content above the gradient hairline pseudo-element */
+  .glass > * {
+    position: relative;
+  }
+  .lift {
+    transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.35s ease, border-color 0.35s ease;
+  }
+  .lift:hover {
+    transform: translateY(-3px);
+    border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+    box-shadow: 0 16px 48px rgba(2, 6, 18, 0.55), 0 0 26px var(--accent-soft);
+  }
+  .text-gradient {
+    background: linear-gradient(120deg, #fff 20%, var(--accent) 55%, #9d6bff 90%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
   }
   .neon-text {
     color: var(--accent);
@@ -247,4 +281,46 @@ body {
     linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
   background-size: 44px 44px;
   mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
+}
+
+/* Fine film grain for cinematic depth */
+.noise {
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
+}
+
+/* Toast entrance "jhumna" — layered spring overshoot */
+@keyframes toast-shake {
+  0% { transform: translateX(0); }
+  20% { transform: translateX(-9px) rotate(-0.6deg); }
+  40% { transform: translateX(7px) rotate(0.5deg); }
+  60% { transform: translateX(-5px); }
+  80% { transform: translateX(3px); }
+  100% { transform: translateX(0); }
+}
+.toast-shake { animation: toast-shake 0.6s cubic-bezier(0.36, 0.07, 0.19, 0.97); }
+
+/* Mascot mood ring pulse */
+@keyframes mood-ring {
+  0%, 100% { box-shadow: 0 0 0 0 var(--accent-soft); }
+  50% { box-shadow: 0 0 0 10px transparent; }
+}
+.mood-ring { animation: mood-ring 2.4s ease-out infinite; }
+
+/* Section heading underline accent */
+.heading-accent {
+  position: relative;
+  padding-left: 0.9rem;
+}
+.heading-accent::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 70%;
+  border-radius: 4px;
+  background: linear-gradient(180deg, var(--accent), #9d6bff);
+  box-shadow: 0 0 12px var(--accent);
 }

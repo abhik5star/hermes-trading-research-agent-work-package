@@ -6,7 +6,7 @@ export function DeckView() {
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-xl font-semibold flex items-center gap-2">
+        <h2 className="text-xl font-semibold heading-accent flex items-center gap-2">
           <ShieldHalf size={19} className="neon-text" /> Institutional Execution & Risk Protection Deck
         </h2>
         <p className="text-xs dim mt-1">Greeks pipeline · liquidation radar · TWAP/VWAP desk · black swan vault · gap predictor</p>

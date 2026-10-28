@@ -1,17 +1,9 @@
 import { useMemo, useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { Html, Float } from '@react-three/drei';
+import { Float } from '@react-three/drei';
 import * as THREE from 'three';
 import type { MascotMood } from '../../engine/types';
-
-const MOOD_EYE: Record<MascotMood, string> = {
-  idle: '#38e8ff',
-  sleeping: '#3b4a6b',
-  happy: '#2dffb0',
-  angry: '#ff3b57',
-  zen: '#b4a6ff',
-  alert: '#ffae3b',
-};
+import { MOOD_META } from './moods';
 
 function Falcon({ mood }: { mood: MascotMood }) {
   const root = useRef<THREE.Group>(null);
@@ -20,6 +12,9 @@ function Falcon({ mood }: { mood: MascotMood }) {
   const head = useRef<THREE.Group>(null);
   const eyeL = useRef<THREE.Mesh>(null);
   const eyeR = useRef<THREE.Mesh>(null);
+  const lidL = useRef<THREE.Mesh>(null);
+  const lidR = useRef<THREE.Mesh>(null);
+  const tear = useRef<THREE.Mesh>(null);
   const halo = useRef<THREE.Mesh>(null);
   const spin = useRef(0);
 
@@ -27,50 +22,73 @@ function Falcon({ mood }: { mood: MascotMood }) {
     const t = clock.elapsedTime;
     if (!root.current) return;
 
-    // Base levitation
-    root.current.position.y = Math.sin(t * (mood === 'sleeping' ? 0.8 : 1.6)) * (mood === 'sleeping' ? 0.08 : 0.18);
+    // Base levitation — celebrating gets a happy hop, sleeping drifts slowly
+    const hop = mood === 'celebrating' ? Math.abs(Math.sin(t * 5)) * 0.35 : 0;
+    root.current.position.y = Math.sin(t * (mood === 'sleeping' ? 0.8 : 1.6)) * (mood === 'sleeping' ? 0.08 : 0.18) + hop;
 
-    // Mood posture
-    const targetRotX = mood === 'angry' ? 0.28 : mood === 'zen' ? 0 : mood === 'alert' ? 0.12 : 0.06;
+    // Mood posture — sad/zen slouch, angry/alert lean forward
+    const targetRotX = mood === 'angry' ? 0.3 : mood === 'sad' ? 0.18 : mood === 'zen' ? 0.05 : mood === 'alert' ? 0.12 : 0.06;
     root.current.rotation.x = THREE.MathUtils.lerp(root.current.rotation.x, targetRotX, delta * 3);
+    const targetLean = mood === 'sad' ? 0.12 : mood === 'thinking' ? -0.22 : 0;
+    root.current.rotation.z = THREE.MathUtils.lerp(root.current.rotation.z, targetLean, delta * 3);
 
-    // Happy victory spin
-    if (mood === 'happy') spin.current += delta * 4.2;
-    root.current.rotation.y = mood === 'happy' ? spin.current : Math.sin(t * 0.5) * 0.25;
+    // Happy / celebrating victory spin
+    if (mood === 'happy' || mood === 'celebrating') spin.current += delta * (mood === 'celebrating' ? 6.5 : 4.2);
+    root.current.rotation.y = mood === 'happy' || mood === 'celebrating' ? spin.current : Math.sin(t * 0.5) * 0.25;
 
     // Wing articulation
-    const flap = mood === 'happy' ? Math.sin(t * 14) * 0.9 : mood === 'sleeping' ? 0.15 : mood === 'zen' ? 0.5 : Math.sin(t * 2.2) * 0.22 + 0.35;
+    const flap =
+      mood === 'celebrating' ? Math.sin(t * 16) * 1.1
+      : mood === 'happy' ? Math.sin(t * 14) * 0.9
+      : mood === 'sleeping' ? 0.15
+      : mood === 'sad' ? 0.28
+      : mood === 'zen' ? 0.5
+      : Math.sin(t * 2.2) * 0.22 + 0.35;
     if (wingL.current) wingL.current.rotation.z = flap;
     if (wingR.current) wingR.current.rotation.z = -flap;
 
-    // Head scan
+    // Head behaviour — alert scans fast, thinking tilts, sleeping droops
     if (head.current) {
-      head.current.rotation.y = mood === 'alert' ? Math.sin(t * 6) * 0.5 : Math.sin(t * 0.8) * 0.18;
-      head.current.rotation.x = mood === 'sleeping' ? 0.35 : 0;
+      head.current.rotation.y = mood === 'alert' ? Math.sin(t * 6) * 0.5 : mood === 'thinking' ? 0.35 : Math.sin(t * 0.8) * 0.18;
+      head.current.rotation.x = mood === 'sleeping' ? 0.4 : mood === 'sad' ? 0.22 : 0;
     }
 
-    // Eye glow
-    const eyeColor = new THREE.Color(MOOD_EYE[mood]);
-    for (const eye of [eyeL.current, eyeR.current]) {
-      if (!eye) continue;
-      const mat = eye.material as THREE.MeshStandardMaterial;
-      mat.color.copy(eyeColor);
-      mat.emissive.copy(eyeColor);
-      mat.emissiveIntensity = mood === 'angry' ? 2.2 + Math.sin(t * 10) * 1.4 : mood === 'sleeping' ? 0.15 : 1.6 + Math.sin(t * 3) * 0.4;
-      eye.scale.y = mood === 'sleeping' ? 0.12 : 1;
+    // Eye glow + eyelid closure (sleeping shut, sad half-droop, zen soft)
+    const eyeColor = new THREE.Color(MOOD_META[mood].color);
+    const lidClose = mood === 'sleeping' ? 1 : mood === 'sad' ? 0.55 : mood === 'zen' ? 0.35 : mood === 'thinking' ? 0.2 : 0.05;
+    for (const [eye, lid] of [[eyeL, lidL], [eyeR, lidR]] as const) {
+      if (eye.current) {
+        const mat = eye.current.material as THREE.MeshStandardMaterial;
+        mat.color.copy(eyeColor);
+        mat.emissive.copy(eyeColor);
+        mat.emissiveIntensity = mood === 'angry' ? 2.2 + Math.sin(t * 10) * 1.4 : mood === 'sleeping' ? 0.15 : 1.6 + Math.sin(t * 3) * 0.4;
+        eye.current.scale.y = mood === 'sleeping' ? 0.08 : 1;
+      }
+      if (lid.current) lid.current.scale.y = THREE.MathUtils.lerp(lid.current.scale.y, lidClose, delta * 6);
     }
+
+    // Sad tear — falls and resets
+    if (tear.current) {
+      const visible = mood === 'sad';
+      tear.current.visible = visible;
+      if (visible) {
+        const cycle = (t * 0.9) % 1;
+        tear.current.position.y = 0.02 - cycle * 0.42;
+        tear.current.position.x = -0.13;
+        tear.current.position.z = 0.34;
+        (tear.current.material as THREE.MeshBasicMaterial).opacity = 1 - cycle;
+      }
+    }
+
     if (halo.current) {
       halo.current.rotation.z = t * 0.4;
       const mat = halo.current.material as THREE.MeshBasicMaterial;
-      mat.color.set(MOOD_EYE[mood]);
+      mat.color.set(MOOD_META[mood].color);
       mat.opacity = mood === 'sleeping' ? 0.15 : 0.5 + Math.sin(t * 2) * 0.15;
     }
   });
 
-  const metal = useMemo(
-    () => ({ color: '#18233f', metalness: 0.85, roughness: 0.28 }),
-    [],
-  );
+  const metal = useMemo(() => ({ color: '#18233f', metalness: 0.85, roughness: 0.28 }), []);
 
   return (
     <group ref={root}>
@@ -82,7 +100,7 @@ function Falcon({ mood }: { mood: MascotMood }) {
       {/* Chest core */}
       <mesh position={[0, 0.05, 0.36]}>
         <octahedronGeometry args={[0.14, 0]} />
-        <meshStandardMaterial color={MOOD_EYE[mood]} emissive={MOOD_EYE[mood]} emissiveIntensity={2} />
+        <meshStandardMaterial color={MOOD_META[mood].color} emissive={MOOD_META[mood].color} emissiveIntensity={2} />
       </mesh>
       {/* Head */}
       <group ref={head} position={[0, 0.62, 0.05]}>
@@ -98,11 +116,25 @@ function Falcon({ mood }: { mood: MascotMood }) {
         {/* Eyes */}
         <mesh ref={eyeL} position={[-0.13, 0.06, 0.3]}>
           <sphereGeometry args={[0.065, 14, 14]} />
-          <meshStandardMaterial color={MOOD_EYE[mood]} emissive={MOOD_EYE[mood]} emissiveIntensity={1.8} />
+          <meshStandardMaterial color={MOOD_META[mood].color} emissive={MOOD_META[mood].color} emissiveIntensity={1.8} />
         </mesh>
         <mesh ref={eyeR} position={[0.13, 0.06, 0.3]}>
           <sphereGeometry args={[0.065, 14, 14]} />
-          <meshStandardMaterial color={MOOD_EYE[mood]} emissive={MOOD_EYE[mood]} emissiveIntensity={1.8} />
+          <meshStandardMaterial color={MOOD_META[mood].color} emissive={MOOD_META[mood].color} emissiveIntensity={1.8} />
+        </mesh>
+        {/* Eyelids (body-coloured shells that slide over the eyes) */}
+        <mesh ref={lidL} position={[-0.13, 0.06, 0.315]} scale={[1, 0.05, 1]}>
+          <sphereGeometry args={[0.072, 14, 14]} />
+          <meshStandardMaterial {...metal} />
+        </mesh>
+        <mesh ref={lidR} position={[0.13, 0.06, 0.315]} scale={[1, 0.05, 1]}>
+          <sphereGeometry args={[0.072, 14, 14]} />
+          <meshStandardMaterial {...metal} />
+        </mesh>
+        {/* Tear */}
+        <mesh ref={tear} visible={false} position={[-0.13, 0.02, 0.34]}>
+          <sphereGeometry args={[0.028, 10, 10]} />
+          <meshBasicMaterial color="#6fb3ff" transparent opacity={0.9} />
         </mesh>
         {/* Crest fins */}
         <mesh position={[0, 0.34, -0.05]} rotation={[0.3, 0, 0]}>
@@ -127,20 +159,8 @@ function Falcon({ mood }: { mood: MascotMood }) {
       {/* Halo */}
       <mesh ref={halo} position={[0, 0.1, -0.35]}>
         <torusGeometry args={[0.85, 0.025, 12, 60]} />
-        <meshBasicMaterial color={MOOD_EYE[mood]} transparent opacity={0.5} blending={THREE.AdditiveBlending} />
+        <meshBasicMaterial color={MOOD_META[mood].color} transparent opacity={0.5} blending={THREE.AdditiveBlending} />
       </mesh>
-      {/* Sleeping Zzz */}
-      {mood === 'sleeping' && (
-        <Html position={[0.55, 0.8, 0]} center>
-          <div className="flex gap-1 text-neon-cyan">
-            {[0, 1, 2].map((i) => (
-              <span key={i} className="zzz font-mono text-xs" style={{ animationDelay: `${i * 0.9}s` }}>
-                Z
-              </span>
-            ))}
-          </div>
-        </Html>
-      )}
     </group>
   );
 }
@@ -159,10 +179,9 @@ function MoodParticles({ mood }: { mood: MascotMood }) {
   }, []);
   useFrame(({ clock }) => {
     if (!ref.current) return;
-    ref.current.rotation.y = clock.elapsedTime * (mood === 'angry' ? 1.6 : 0.5);
+    ref.current.rotation.y = clock.elapsedTime * (mood === 'angry' ? 1.6 : mood === 'celebrating' ? 2.4 : 0.5);
     const mat = ref.current.material as THREE.PointsMaterial;
-    const color = mood === 'happy' ? '#2dffb0' : mood === 'angry' ? '#ff3b57' : mood === 'zen' ? '#b4a6ff' : '#38e8ff';
-    mat.color.set(color);
+    mat.color.set(MOOD_META[mood].color);
     mat.opacity = mood === 'sleeping' ? 0.15 : 0.55;
   });
   return (

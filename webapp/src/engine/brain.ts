@@ -103,6 +103,7 @@ export class Brain extends Emitter<BrainEvents> {
   private monteCarlo: MonteCarloTree | null = null;
   private greeks: GreekRow[] = [];
   private gammaBlast = { blast: false, score: 0, strike: null as number | null, blastAt: 0 };
+  private gammaArmed = true;
   private dark = new DarkLiquidityTracker();
   risk = new RiskEngine();
   hatchery = new StrategyHatchery();
@@ -135,6 +136,12 @@ export class Brain extends Emitter<BrainEvents> {
   private optionBasis = new Map<string, { base: number; entry: number; beta: number }>();
   private lastFitBroadcast = 0;
   private lastFitKey = '';
+  private lastWinAt = 0;
+  private lastLossAt = 0;
+  private lastAlertAt = 0;
+  private lastWhaleAt = 0;
+  private lastPositionActivity = Date.now();
+  private lastMood: MascotMood = 'idle';
 
   constructor(private feedInstance: SimulatedFeed) {
     super();
@@ -179,6 +186,7 @@ export class Brain extends Emitter<BrainEvents> {
       });
       const event = this.regimeSwitch.evaluate(ind ?? snapshotIndicators(this.feedInstance.getCandles(symbol)), trigger, Date.now());
       if (event?.to === 'whale-breakout') {
+        this.lastWhaleAt = Date.now();
         this.flashTheme(side === 'ask' ? 'whale-green' : 'whale-red', 5000);
         this.escapeWhale(side);
         this.pushAlert('whale', 'Whale Breakout Escape Engine fired', trigger.reasons.join(' · '));
@@ -302,7 +310,22 @@ export class Brain extends Emitter<BrainEvents> {
     this.greeks = buildChain(spot, step, 4, 0.13 + Math.random() * 0.04, Math.random);
     const detected = detectGammaBlast(this.greeks);
     const wasBlasting = this.gammaBlast.blast;
-    this.gammaBlast = { ...detected, blastAt: detected.blast ? Date.now() : this.gammaBlast.blastAt };
+    // Hysteresis: arm on a strong (>0.82) surge, only clear once momentum
+    // cools below 0.5, so noisy chains don't flap the alert state.
+    let blasting = wasBlasting;
+    if (!wasBlasting && detected.blast && this.gammaArmed) {
+      blasting = true;
+      this.gammaArmed = false;
+    } else if (wasBlasting && detected.score < 0.5) {
+      blasting = false;
+      this.gammaArmed = true;
+    }
+    this.gammaBlast = {
+      blast: blasting,
+      score: detected.score,
+      strike: detected.strike,
+      blastAt: blasting && !wasBlasting ? Date.now() : this.gammaBlast.blastAt,
+    };
     const blast = this.gammaBlast;
     if (blast.blast && !wasBlasting) {
       this.flashTheme('amber', 6000);
@@ -339,6 +362,7 @@ export class Brain extends Emitter<BrainEvents> {
       strategy: 'Gamma-Blast Momentum Buy',
     };
     this.positions.push(pos);
+    this.lastPositionActivity = Date.now();
     this.optionBasis.set(pos.id, { base: this.feedInstance.getPrice(this.focusSymbol), entry: premium, beta: 9 });
     this.execution.createOrder(symbol, 'BUY', pos.qty, premium, 'VWAP');
     this.pushAlert('success', 'Multi-lot option buying executed', `${symbol} × ${pos.qty} — trailing stop armed to protect capital`);
@@ -403,6 +427,7 @@ export class Brain extends Emitter<BrainEvents> {
       strategy: this.hatchery.active.codename,
     };
     this.positions.push(pos);
+    this.lastPositionActivity = Date.now();
     this.neuralAction = side;
     this.execution.createOrder(symbol, side, qty, price, Math.random() > 0.5 ? 'TWAP' : 'VWAP');
     this.pushAlert('success', `Neural ${side} executed — ${inst.display}`, `${qty} units via iceberg slices · confluence ${confScore}% · ${this.mode.toUpperCase()}`);
@@ -428,6 +453,7 @@ export class Brain extends Emitter<BrainEvents> {
       strategy: 'Theta-Harvest Straddle',
     };
     this.positions.push(pos);
+    this.lastPositionActivity = Date.now();
     this.optionBasis.set(pos.id, { base: this.feedInstance.getPrice(this.focusSymbol), entry: price, beta: 6 });
     this.say('Sideways regime confirm — delta-neutral Short Straddle activate, theta decay harvest shuru. Order Block boundaries pe strict monitoring hai.');
   }
@@ -475,13 +501,16 @@ export class Brain extends Emitter<BrainEvents> {
       ...p,
       exit: p.current,
       closedAt: Date.now(),
-      outcome: p.pnl > 0 ? 'win' : Math.abs(p.pnlPct) < 0.002 ? 'scratch' : 'loss',
+      outcome: p.pnl > 0 ? 'win' : p.pnl < 0 ? 'loss' : 'scratch',
       reason,
     };
+    this.lastPositionActivity = Date.now();
     this.recentTrades.unshift(record);
     this.recentTrades = this.recentTrades.slice(0, 24);
     this.risk.applyPnl(record.pnl);
     this.zen.reportTrade(record.outcome);
+    if (record.outcome === 'win') this.lastWinAt = Date.now();
+    if (record.outcome === 'loss') this.lastLossAt = Date.now();
     const pm = postMortemFromTrade(record, this.probabilityRef);
     this.probabilityRef = pm.newProbability;
     this.postMortems.unshift(pm);
@@ -590,26 +619,65 @@ export class Brain extends Emitter<BrainEvents> {
   // ── Mood / theme ────────────────────────────────────────────────────────
 
   private updateMoodAndTheme(): void {
-    if (this.zen.isLocked()) {
-      this.mood = 'zen';
-      this.setThemeIfOlder('zen');
-      return;
-    }
-    const lossPressure = this.risk.state.drawdownPct < -0.012;
-    const lastLoss = this.recentTrades[0]?.outcome === 'loss';
-    const freshBlast = this.gammaBlast.blast && Date.now() - this.gammaBlast.blastAt < 9000;
-    if (freshBlast || this.regimeSwitch.regime === 'whale-breakout') this.mood = 'alert';
-    else if (lossPressure || lastLoss) this.mood = 'angry';
-    else if (this.positions.some((p) => p.pnl > 0) || this.risk.state.dailyPnl > 0) this.mood = 'happy';
-    else if (!this.positions.length && (this.confluence.get(this.focusSymbol)?.score ?? 0) < 45) this.mood = 'sleeping';
-    else this.mood = 'idle';
+    const now = Date.now();
+    const confluenceScore = this.confluence.get(this.focusSymbol)?.score ?? 0;
+    const quietFor = now - this.lastAlertAt;
+    let next: MascotMood;
 
-    if (this.theme.until && Date.now() > this.theme.until) {
-      this.theme = { token: this.mood === 'sleeping' ? 'deep-focus' : 'cinematic', until: 0 };
+      if (this.zen.isLocked()) {
+        next = 'zen';
+      } else {
+        const freshBlast = this.gammaBlast.blast && now - this.gammaBlast.blastAt < 9000;
+        const freshWhale = now - this.lastWhaleAt < 9000;
+        const freshWin = now - this.lastWinAt < 14_000;
+        const freshLoss = now - this.lastLossAt < 16_000;
+        const lossPressure = this.risk.state.drawdownPct < -0.012;
+        const inProfit = this.positions.some((p) => p.pnl > 0);
+
+        // Priority: zen guard → trade outcomes (celebrate / grieve) → short
+        // alert bursts → risk anger → contentment → sleep → thought → idle
+        if (freshWin) next = 'celebrating';
+        else if (freshLoss) next = 'sad';
+        else if (freshBlast || freshWhale) next = 'alert';
+        else if (lossPressure) next = 'angry';
+        else if (inProfit || (this.risk.state.dailyPnl > 0 && this.positions.length > 0)) next = 'happy';
+        else if (
+          !this.positions.length &&
+          now - this.lastPositionActivity > 28_000 &&
+          quietFor > 12_000
+        ) next = 'sleeping';
+        else if (confluenceScore >= 45 && confluenceScore < 68) next = 'thinking';
+        else next = 'idle';
+      }
+
+    // Mood transitions get a short mascot reflection (no spam — only on change)
+    if (next !== this.lastMood) {
+      this.lastMood = next;
+      this.narrateMood(next);
+    }
+    this.mood = next;
+
+    if (this.theme.until && now > this.theme.until) {
+      this.theme = { token: next === 'sleeping' ? 'deep-focus' : 'cinematic', until: 0 };
     } else if (!this.theme.until) {
-      const token = this.regimeSwitch.regime === 'sideways' ? 'violet' : this.mood === 'sleeping' ? 'deep-focus' : 'cinematic';
+      const token = this.regimeSwitch.regime === 'sideways' ? 'violet' : next === 'sleeping' ? 'deep-focus' : 'cinematic';
       if (this.theme.token !== token) this.theme = { token, until: 0 };
     }
+  }
+
+  private narrateMood(mood: MascotMood): void {
+    const lines: Partial<Record<MascotMood, string>> = {
+      sleeping: 'Bohot der se koi strong setup nahi mila — main halka sa power nap le raha hoon. Confluence build hote hi jag jaunga. 😴',
+      sad: 'Hmm, ye trade stop pe nikal gaya. Bura mat mano — post-mortem mein mistake save kar li hai, agla entry zyada smart hoga. 😢',
+      thinking: 'Ek minute… RSI, Donchian aur SMC zone align ho rahe hain ya nahi, brain confluence calculate kar raha hai. 🤔',
+      celebrating: 'YES! Target hit! Ye strategy ka discipline jeeta — ab thodi der victory lap, phir next setup. 🎉',
+      happy: 'Positions green chal rahe hain, Chandelier trail tight hai — profit ko protect kar rahe hain. 😊',
+      angry: 'Drawdown pressure badh raha hai — main defensive posture mein aa gaya hoon, naye entries freeze. 💢',
+      alert: 'Sensors full alert! Whale-grade movement ya gamma explosion — armor mode ON, dekh ke action lunga. ⚡',
+      idle: 'Wapas scanning mode pe — market structure ko continuously monitor kar raha hoon.',
+    };
+    const text = lines[mood];
+    if (text) this.say(text);
   }
 
   flashTheme(token: ThemeState['token'], ms: number): void {
@@ -624,6 +692,9 @@ export class Brain extends Emitter<BrainEvents> {
   // ─— Alerts / chat ───────────────────────────────────────────────────────
 
   private pushAlert(tone: BrainAlert['tone'], title: string, body: string): void {
+    // Routine info telemetry (dark-pool whispers) must not keep the falcon
+    // awake — only high-signal events reset the idle/sleep timer.
+    if (tone !== 'info') this.lastAlertAt = Date.now();
     const alert: BrainAlert = { id: uid('al'), tone, title, body, at: Date.now(), read: false };
     this.alerts.unshift(alert);
     this.alerts = this.alerts.slice(0, 40);

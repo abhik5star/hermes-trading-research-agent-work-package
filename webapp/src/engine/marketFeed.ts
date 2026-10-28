@@ -85,7 +85,7 @@ export class SimulatedFeed extends Emitter<FeedEvents> implements FeedAdapter {
       tickCount: 0,
       volumeAvg20: candles.slice(-20).reduce((a, c) => a + c.v, 0) / 20,
       book: this.buildBook(inst, price, rand),
-      nextWhaleIn: 18 + Math.floor(rand() * 18),
+      nextWhaleIn: 42 + Math.floor(rand() * 36),
     };
     this.streams.set(symbol, stream);
   }
@@ -165,7 +165,7 @@ export class SimulatedFeed extends Emitter<FeedEvents> implements FeedAdapter {
         s.drift = roll < 0.4 ? stepVol * (0.4 + rand()) : roll > 0.72 ? -stepVol * (0.4 + rand()) : 0;
       }
       if (--s.nextWhaleIn <= 0) {
-        s.nextWhaleIn = 26 + Math.floor(rand() * 22);
+        s.nextWhaleIn = 44 + Math.floor(rand() * 40);
         s.whaleLeft = 4 + Math.floor(rand() * 3);
         s.whaleDir = rand() > 0.5 ? 1 : -1;
         this.emit('whale', {
