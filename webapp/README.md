@@ -22,10 +22,12 @@ and badges rather than dense decimal clusters.
   (volume, demand/supply zones, structural tags, crosshair, timeframes),
   Watchlist tabs, and five insight cards (Strategy Lab, Hypothesis Engine,
   Learning Loop, Trade Autopsy, Risk Centre).
-- **Miri AI mascot (bottom-right, always available)** — floating animated
-  avatar with a gentle bob, mood emoji badge, unread counter, expandable chat
-  panel (`components/assistant/AssistantMascot.tsx`) with typewriter replies,
-  typing dots, quick prompts and a demo mic button.
+- **Miri AI mascot (bottom-right, always available)** — compact floating
+  animated avatar with a gentle bob and mood emoji badge, paired with a short
+  speech bubble (`components/assistant/AssistantMascot.tsx`) that shows only
+  the latest Hinglish line (3-line clamp, typewriter effect + typing dots).
+  No long chat panel: the bubble auto-pops on a new brain line, dismisses with
+  its X button, and the mascot click toggles it back.
 - **Bottom status bar** — demo-feed / broker / paper-mode connection states.
 
 ## Stack
