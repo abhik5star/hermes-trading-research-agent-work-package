@@ -1,19 +1,35 @@
 # Hermes Neural — Autonomous Self-Learning AI Trading Brain Dashboard
 
-A cinematic, glassmorphic 3D command surface for an autonomous SMC/ICT trading
-brain. Designed around two references — **Kibitz AI** and **Apple Vision Pro** —
-the interface stays ultra-minimal: every complex indicator is processed
-silently in the engine layer and rendered only as glow, particles, or neon
-structure, never as raw decimal clusters.
+A clean, professional **trading-terminal-style web dashboard** (dark navy
+fintech look, 2D canvas charts — no holograms or 3D clutter) for an autonomous
+SMC/ICT trading brain, with a built-in Hinglish AI assistant ("Miri AI").
+Complex indicators are processed silently in the engine layer and surfaced as
+plain scores, zones and badges rather than dense decimal clusters.
+
+## Interface map
+
+- **Left sidebar** — Home, AI Market Scanner, Crypto / Indian Index Options /
+  Stock Options & Futures / High Beta entry points, Strategy Lab, Backtesting,
+  Trade Autopsy, AI Learning Memory, Risk Centre, Data Connections, Settings +
+  Beginner Mode toggle (collapses to a horizontal strip on mobile).
+- **Top ticker** — live asset pills (BTC, ETH, NIFTY, BANKNIFTY, RELIANCE…),
+  mode menu (Backtest / Paper / Live / Time Machine), font scaler, compact
+  Emergency Square-Off, notification bell, account chip.
+- **Home** — Miri AI assistant card, Market Overview (regime + AI Health ring
+  + top opportunities), Quick Stats, a TradingView-style 2D candlestick canvas
+  (volume, demand/supply zones, structural tags, crosshair, timeframes),
+  Watchlist tabs, and five insight cards (Strategy Lab, Hypothesis Engine,
+  Learning Loop, Trade Autopsy, Risk Centre).
+- **Bottom status bar** — demo-feed / broker / paper-mode connection states.
 
 ## Stack
 
 | Layer | Technology |
 | --- | --- |
 | Framework | React 18 + TypeScript + Vite |
-| 3D | three.js, @react-three/fiber, @react-three/drei |
+| Charts | Custom 2D HTML5 canvas candlestick renderer (no WebGL dependency) |
 | State | Zustand (brain → UI frame subscription) |
-| Motion | Framer Motion |
+| Motion | Framer Motion (subtle card/toast/tab transitions only) |
 | Styling | Tailwind CSS with theme-token CSS variables |
 | Icons | lucide-react |
 
@@ -73,11 +89,12 @@ src/
 │   └── brain.ts            Orchestrator + event bus (single source of truth)
 ├── state/store.ts          Zustand store, theme/font application
 ├── components/
-│   ├── chart/              R3F neural grid, zones, particles, nebula, wormhole, Monte Carlo tree
-│   ├── mascot/             3D cybernetic falcon + emotion engine + Hinglish speech bubble
-│   ├── nav/                Mode switch, font scaler, panic switch, bell, rails
-│   ├── panels/             Glance cards, risk HUD, greeks, execution desk, vault…
-│   └── views/              Command, Time Machine, Hatchery & Lab, Learning Log, Risk Deck
+│   ├── layout/             Sidebar (desktop) + MobileNav, TickerBar, StatusBar
+│   ├── home/               MiriCard, MarketOverview, QuickStats, CandleChart (canvas), Watchlist, BottomRow
+│   ├── mascot/moods.ts     Mood metadata shared by the Miri assistant card
+│   ├── nav/                Notification bell, toast stack, risk-lockdown banner
+│   ├── panels/             Risk HUD, Greeks, positions, execution desk, vault…
+│   └── views/              Home, Scanner, Lab, Backtest, Autopsy, Risk, Settings
 ```
 
 ## Going live with real data
@@ -95,17 +112,17 @@ No component or engine module outside `marketFeed.ts` needs to change.
 
 ## Feature map (spec → implementation)
 
-1. Global controls — `nav/ModeSwitch.tsx`, `nav/FontScaler.tsx`, `nav/PanicButton.tsx`, `TopBar.tsx`
-2. SMC/ICT + hidden confluence — `engine/smcEngine.ts`, `engine/confluence.ts`, `chart/chartObjects.tsx`
-3. Time Machine — `engine/timeMachine.ts`, `views/TimeMachineView.tsx`
-4. Neural state, learning log, risk deck, Monte Carlo — `panels/`, `views/LearningView.tsx`, `engine/monteCarlo.ts`
-5. 3D falcon mascot + bilingual chat + bell — `components/mascot/`, `nav/NotificationBell.tsx`
-6. Anti-anxiety UX — three glance cards, morphing numbers, Deep-Focus-Grey idle theme
-7. Dark liquidity, wormhole, Zen Guard, Flash sandbox — `engine/darkLiquidity.ts`, `WormholeLayers`, `engine/zenGuard.ts`, `views/HatcheryView.tsx`
-8. Strategy Hatchery GA — `engine/hatchery.ts` + `engine/backtest.ts`
-9. Omni-asset sandbox + fit stream — `engine/sandbox.ts`, `OmniFitStream`
+1. Global controls — `layout/TickerBar.tsx` (mode menu, font scaler, compact square-off, bell)
+2. SMC/ICT + hidden confluence — `engine/smcEngine.ts`, `engine/confluence.ts`, rendered as zones/tags on the 2D canvas (`home/CandleChart.tsx`)
+3. Predictive paths — `engine/timeMachine.ts`; Monte Carlo 10k paths in `views/ScannerView.tsx`
+4. Neural state, learning log, risk deck — `panels/`, `views/AutopsyView.tsx`, `engine/monteCarlo.ts`
+5. Miri AI assistant card + bilingual speech + bell — `home/MiriCard.tsx`, `nav/NotificationBell.tsx`
+6. Anti-anxiety UX — Quick Stats/Market Overview cards, morphing numbers, calm Deep-Focus-Grey idle theme
+7. Dark liquidity, multi-timeframe confluence, Zen Guard, Flash sandbox — `engine/darkLiquidity.ts`, `views/ScannerView.tsx`, `engine/zenGuard.ts`, `views/BacktestView.tsx`
+8. Strategy Hatchery GA — `engine/hatchery.ts` + `engine/backtest.ts`, UI in `views/LabView.tsx`
+9. Omni-asset sandbox + fit stream — `engine/sandbox.ts`, fit grid in `views/LabView.tsx`
 10. Option regime switcher + whale escape — `engine/regime.ts`, brain event wiring
-11. Greeks, Gamma Blast, gap predictor — `engine/greeks.ts`, `engine/gapPredictor.ts`, `DeckView.tsx`
+11. Greeks, Gamma Blast, gap predictor — `engine/greeks.ts`, `engine/gapPredictor.ts`, `views/RiskView.tsx`
 12. Funding/liquidation, TWAP/VWAP, Black Swan vault — `panels/DeckPanels.tsx`, `engine/execution.ts`
 
 > All P&L, order flow and predictions are simulated locally. The system is a
@@ -114,23 +131,23 @@ No component or engine module outside `marketFeed.ts` needs to change.
 
 ## Emotion engine & event popups
 
-The cybernetic falcon runs a nine-state emotion state machine
-(`engine/brain.ts` → `updateMoodAndTheme`, metadata in
-`components/mascot/moods.ts`):
+The assistant mood state machine (`engine/brain.ts` → `updateMoodAndTheme`,
+metadata in `components/mascot/moods.ts`) drives the status pill on the Miri
+card:
 
 | Mood | Trigger |
 | --- | --- |
 | `sleeping` 😴 | No open positions and no high-signal events for ~28s (auto power-nap, Deep-Focus-Grey theme) |
 | `thinking` 🤔 | Confluence sitting in the 45–68 evaluation band |
 | `happy` 😊 | Open positions running in profit |
-| `celebrating` 🎉 | Fresh winning trade closed (victory spin + hop) |
-| `sad` 😢 | Losing trade closed (drooping eyelids, falling tear, reflection in chat) |
+| `celebrating` 🎉 | Fresh winning trade closed |
+| `sad` 😢 | Losing trade closed (reflection posted in the speech bubble) |
 | `angry` 💢 | Daily drawdown pressure beyond −1.2% |
 | `alert` ⚡ | Time-boxed whale/γ-blast burst with hysteresis (never latches) |
 | `zen` 🧘 | Zen Guard revenge-trading lockout |
 | `idle` 🛰️ | Default structural scanning |
 
 Every brain event (fills, stops, whales, gamma blasts, hedges, promotions,
-panic) also raises a spring-shaken toast via `components/nav/ToastStack.tsx` —
-slides in from the right with an overshoot shake, Hinglish quip per tone,
-lifetime progress bar, and auto-dismiss after 7s.
+panic) raises a toast via `components/nav/ToastStack.tsx` — slides in from the
+right with a subtle spring shake, Hinglish quip per tone, lifetime progress
+bar, and auto-dismiss after 7s.

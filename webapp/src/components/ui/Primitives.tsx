@@ -18,7 +18,7 @@ export function Panel({
   bodyClassName?: string;
 }) {
   return (
-    <section className={cn('glass rounded-3xl relative overflow-hidden', className)}>
+    <section className={cn('card rounded-2xl relative overflow-hidden', className)}>
       {(title || right) && (
         <header className="flex items-start justify-between px-5 pt-4 pb-3">
           <div>

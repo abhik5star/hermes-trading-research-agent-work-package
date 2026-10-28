@@ -48,7 +48,7 @@ export function NotificationBell() {
     <>
       <button
         onClick={() => toggleBell()}
-        className="relative w-11 h-11 rounded-2xl glass grid place-items-center transition-transform hover:scale-105"
+        className="relative w-11 h-11 rounded-2xl card grid place-items-center transition-transform hover:scale-105"
         style={{ boxShadow: latest ? `0 0 22px ${glow}` : undefined }}
         title="Ambient notification center"
       >

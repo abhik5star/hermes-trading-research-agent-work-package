@@ -1,21 +1,22 @@
 import { useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useStore, brain } from './state/store';
-import { TopBar } from './components/nav/TopBar';
-import { LeftRail } from './components/nav/LeftRail';
-import { CommandView } from './views/CommandView';
-import { TimeMachineView } from './views/TimeMachineView';
-import { HatcheryView } from './views/HatcheryView';
-import { LearningView } from './views/LearningView';
-import { DeckView } from './views/DeckView';
+import { Sidebar, MobileNav } from './components/layout/Sidebar';
+import { TickerBar } from './components/layout/TickerBar';
+import { StatusBar } from './components/layout/StatusBar';
+import { HomeView } from './views/HomeView';
+import { ScannerView } from './views/ScannerView';
+import { LabView } from './views/LabView';
+import { BacktestView } from './views/BacktestView';
+import { AutopsyView } from './views/AutopsyView';
+import { RiskView } from './views/RiskView';
+import { SettingsView } from './views/SettingsView';
 import { ZenOverlay } from './components/ZenOverlay';
 import { RiskLockdownBanner } from './components/nav/RiskLockdownBanner';
-import { StatusFooter } from './components/nav/StatusFooter';
 import { ToastStack } from './components/nav/ToastStack';
-import { AmbientBackground } from './components/AmbientBackground';
 import { BrainCircuit } from 'lucide-react';
 
-/** Wires Zen Guard interaction telemetry (erratic mouse + tab thrashing). */
+/** Zen Guard interaction telemetry — erratic mouse + tab thrashing. */
 function BehaviorProbe() {
   useEffect(() => {
     let last = 0;
@@ -38,34 +39,15 @@ function BehaviorProbe() {
   return null;
 }
 
-function AmbientFlash() {
-  const token = useStore((s) => s.snapshot?.theme.token);
-  const flash = token === 'whale-green' || token === 'whale-red' || token === 'amber' || token === 'panic';
-  const color =
-    token === 'whale-green' ? 'rgba(45,255,176,0.16)'
-    : token === 'whale-red' ? 'rgba(255,84,112,0.18)'
-    : token === 'amber' ? 'rgba(255,174,59,0.15)'
-    : token === 'panic' ? 'rgba(255,59,87,0.22)'
-    : 'transparent';
-  return (
-    <motion.div
-      className="fixed inset-0 pointer-events-none z-[60]"
-      animate={{ opacity: flash ? [0.25, 0.75, 0.35] : 0 }}
-      transition={{ duration: 1.1, repeat: flash ? Infinity : 0 }}
-      style={{ background: `radial-gradient(circle at 50% 40%, ${color}, transparent 75%)` }}
-    />
-  );
-}
-
 function BootScreen() {
   return (
     <div className="h-screen grid place-items-center">
       <div className="text-center">
-        <div className="w-16 h-16 mx-auto rounded-3xl grid place-items-center breathe" style={{ background: 'var(--accent-soft)', border: '1px solid var(--panel-border)' }}>
-          <BrainCircuit size={30} className="neon-text" />
+        <div className="w-14 h-14 mx-auto rounded-2xl grid place-items-center breathe" style={{ background: 'var(--accent-soft)', border: '1px solid var(--panel-border)' }}>
+          <BrainCircuit size={28} className="text-[var(--accent)]" />
         </div>
-        <p className="mt-4 shimmer-text font-medium">Waking the neural trading brain…</p>
-        <p className="text-xs dim mt-1">connecting simulated yfinance + Binance parity feeds</p>
+        <p className="mt-4 shimmer-text font-semibold text-[0.9rem]">Neural brain ko wake kar rahe hain…</p>
+        <p className="text-[0.7rem] dim mt-1">demo market feeds connect ho rahe hain</p>
       </div>
     </div>
   );
@@ -83,35 +65,43 @@ export default function App() {
   if (!ready) return <BootScreen />;
 
   return (
-    <div className="h-screen flex flex-col">
+    <div className="h-screen flex gap-3 p-3 overflow-hidden">
       <BehaviorProbe />
-      <AmbientBackground />
-      <AmbientFlash />
-      <TopBar />
 
-      <div className="flex-1 flex gap-4 px-4 lg:px-6 py-4 min-h-0">
-        <LeftRail />
-        <main className="flex-1 min-w-0 overflow-y-auto pr-1">
+      {/* Left navigation rail */}
+      <div className="hidden lg:block">
+        <Sidebar />
+      </div>
+
+      {/* Main column */}
+      <div className="flex-1 min-w-0 flex flex-col gap-3">
+        <MobileNav />
+        <TickerBar />
+
+        <main className="flex-1 overflow-y-auto pr-1 min-h-0">
           <AnimatePresence mode="wait">
             <motion.div
               key={view}
-              initial={{ opacity: 0, y: 16 }}
+              initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -12 }}
-              transition={{ duration: 0.28, ease: 'easeOut' }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.22, ease: 'easeOut' }}
             >
-              {view === 'command' && <CommandView />}
-              {view === 'timemachine' && <TimeMachineView />}
-              {view === 'hatchery' && <HatcheryView />}
-              {view === 'learning' && <LearningView />}
-              {view === 'deck' && <DeckView />}
+              {view === 'home' && <HomeView />}
+              {view === 'scanner' && <ScannerView />}
+              {view === 'lab' && <LabView />}
+              {view === 'backtest' && <BacktestView />}
+              {view === 'autopsy' && <AutopsyView />}
+              {view === 'risk' && <RiskView />}
+              {view === 'settings' && <SettingsView />}
             </motion.div>
           </AnimatePresence>
         </main>
+
+        <StatusBar />
       </div>
 
-      <StatusFooter />
-      <div className="fixed inset-0 grid-overlay pointer-events-none z-[1]" />
+      {/* Global overlays */}
       <ToastStack />
       <RiskLockdownBanner />
       <ZenOverlay />

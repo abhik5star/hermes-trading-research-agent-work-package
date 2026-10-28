@@ -124,7 +124,7 @@ export function ToastStack() {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 0.65 }}
-          className="glass rounded-2xl px-4 py-2.5 flex items-center gap-2 text-[0.68rem] dim pointer-events-none"
+          className="card rounded-2xl px-4 py-2.5 flex items-center gap-2 text-[0.68rem] dim pointer-events-none"
         >
           <BellRing size={12} />
           Brain events yahan pop-up honge — koi action miss nahi hoga

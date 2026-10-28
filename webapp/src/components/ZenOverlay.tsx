@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Lock, Flower2 } from 'lucide-react';
 import { useStore, brain } from '../state/store';
-import { FalconMascot } from './mascot/FalconMascot';
 
 export function ZenOverlay() {
   const zen = useStore((s) => s.snapshot?.zen);
@@ -24,32 +23,26 @@ export function ZenOverlay() {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           className="fixed inset-0 z-[70] grid place-items-center p-6"
-          style={{ background: 'rgba(7,10,24,0.78)', backdropFilter: 'blur(18px)' }}
+          style={{ background: 'rgba(5,9,22,0.8)', backdropFilter: 'blur(14px)' }}
         >
           <motion.div
-            initial={{ scale: 0.92, y: 24 }}
+            initial={{ scale: 0.94, y: 20 }}
             animate={{ scale: 1, y: 0 }}
-            className="glass-strong rounded-[2rem] max-w-lg w-full p-8 text-center relative overflow-hidden"
-            style={{ border: '1px solid rgba(180,166,255,0.35)', boxShadow: '0 0 60px rgba(150,130,255,0.25)' }}
+            className="card p-8 max-w-md w-full text-center"
+            style={{ borderColor: 'rgba(157,140,255,0.4)', boxShadow: '0 0 50px rgba(157,140,255,0.2)' }}
           >
-            <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(circle at 50% 0%, rgba(180,166,255,0.16), transparent 60%)' }} />
-            <div className="flex items-center justify-center gap-2 text-neon-violet mb-2">
+            <div className="flex items-center justify-center gap-2 text-[#9d8cff] mb-3">
               <Flower2 size={18} />
-              <span className="tracking-[0.3em] text-xs uppercase">Psychological Zen Guard</span>
+              <span className="tracking-[0.25em] text-xs uppercase font-semibold">Psychological Zen Guard</span>
             </div>
-            <div className="h-56">
-              <FalconMascot mood="zen" height={230} />
-            </div>
-            <h3 className="text-lg font-semibold mt-2">Calm mode engaged — non-essential operations locked</h3>
-            <p className="text-sm dim mt-2 leading-relaxed">{zen.reason}</p>
-            <div className="flex items-center justify-center gap-2 mt-4 text-xs dim">
+            <div className="text-5xl my-4 float-y">🧘</div>
+            <h3 className="text-[1rem] font-bold">Calm mode engaged — non-essential operations locked</h3>
+            <p className="text-[0.76rem] dim mt-2 leading-relaxed">{zen.reason}</p>
+            <div className="flex items-center justify-center gap-2 mt-4 text-[0.72rem] dim">
               <Lock size={12} />
-              Auto-release in <span className="font-mono text-neon-violet">{remaining}s</span> · revenge-trading protection
+              Auto-release in <span className="font-mono text-[#9d8cff] font-bold">{remaining}s</span> · revenge-trading protection
             </div>
-            <button
-              onClick={() => brain.releaseZen()}
-              className="btn-ghost mt-5 px-6 py-2.5 rounded-2xl text-sm font-medium"
-            >
+            <button onClick={() => brain.releaseZen()} className="btn btn-primary mt-5 px-6 py-2.5 text-[0.78rem] font-semibold">
               I am calm — release guard
             </button>
           </motion.div>
