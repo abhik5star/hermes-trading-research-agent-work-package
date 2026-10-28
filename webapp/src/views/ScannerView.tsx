@@ -1,19 +1,17 @@
-import { Radar, Layers3, Network } from 'lucide-react';
-import { useState } from 'react';
+import { Radar, Network, Layers3, ArrowRight, FlaskConical } from 'lucide-react';
 import { useStore } from '../state/store';
-import { CandleChart } from '../components/home/CandleChart';
-import { NeuralStateWidget } from '../components/panels/NeuralStateWidget';
-import { PositionsList } from '../components/panels/PositionsList';
-import { Watchlist } from '../components/home/Watchlist';
+import { InstrumentBrowser } from '../components/scanner/InstrumentBrowser';
 import { Chip } from '../components/ui/Primitives';
 import { cn } from '../utils/cn';
 
-type Layer = 'structure' | 'wormhole' | 'montecarlo';
-
 export function ScannerView() {
   const snapshot = useStore((s) => s.snapshot);
-  const [layer, setLayer] = useState<Layer>('structure');
+  const openChart = useStore((s) => s.openChart);
+  const timeframe = useStore((s) => s.timeframe);
+  const setView = useStore((s) => s.setView);
   if (!snapshot) return null;
+
+  const mc = snapshot.monteCarlo;
 
   return (
     <div className="space-y-4">
@@ -21,98 +19,76 @@ export function ScannerView() {
         <h2 className="text-lg font-bold heading-accent flex items-center gap-2">
           <Radar size={18} className="text-[var(--accent)]" /> AI Market Scanner
         </h2>
-        <div className="card p-1 flex">
-          {([
-            { key: 'structure', label: 'SMC/ICT Structure', icon: Layers3 },
-            { key: 'wormhole', label: 'Multi-Timeframe', icon: Network },
-            { key: 'montecarlo', label: 'Monte Carlo 10K', icon: Network },
-          ] as const).map((t) => {
-            const Icon = t.icon;
-            return (
-              <button
-                key={t.key}
-                onClick={() => setLayer(t.key)}
-                className={cn(
-                  'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[0.7rem] font-semibold transition-all',
-                  layer === t.key ? 'bg-[var(--accent-soft)] text-white' : 'dim hover:text-white',
-                )}
-              >
-                <Icon size={12} /> {t.label}
-              </button>
-            );
-          })}
-        </div>
+        <Chip tone="amber">Simulated screener · live broker data connected nahi hai</Chip>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-4">
-        <div className="xl:col-span-8 min-h-[480px]">
-          <CandleChart />
+        {/* Flow 1 + 2: category → instrument → timeframe → chart */}
+        <div className="xl:col-span-8">
+          <InstrumentBrowser />
         </div>
+
+        {/* Insight rail */}
         <div className="xl:col-span-4 space-y-4">
-          <NeuralStateWidget />
-          <PositionsList />
-        </div>
-      </div>
+          <section className="card p-4">
+            <h3 className="text-[0.84rem] font-bold flex items-center gap-2 mb-3">
+              <Network size={14} className="text-[var(--accent)]" /> Focused Instrument Scan
+            </h3>
+            <p className="text-[0.7rem] dim mb-3">
+              Abhi focus: <b className="text-white/85">{snapshot.focusSymbol.replace('_PERP', '')}</b> · {timeframe}
+            </p>
 
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-4">
-        <div className="xl:col-span-8 card p-4">
-          <h3 className="text-[0.88rem] font-bold mb-3">
-            {layer === 'structure' && 'Detected SMC / ICT Structures'}
-            {layer === 'wormhole' && 'Multi-Timeframe Confluence (5M · 15M · 1H)'}
-            {layer === 'montecarlo' && 'Monte Carlo Neural Tree — 10,000 Paths'}
-          </h3>
-          {layer === 'structure' && (
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              <div className="rounded-xl p-3" style={{ background: 'rgba(255,255,255,0.035)' }}>
+                <p className="hud-label !text-[0.56rem]">Confluence</p>
+                <p className="text-[0.95rem] font-bold font-mono mt-1">{snapshot.confluenceScore.toFixed(0)}%</p>
+              </div>
+              <div className="rounded-xl p-3" style={{ background: 'rgba(255,255,255,0.035)' }}>
+                <p className="hud-label !text-[0.56rem]">Bias</p>
+                <p className={cn('text-[0.82rem] font-bold mt-1.5 capitalize', snapshot.bias === 'bullish' ? 'text-[var(--green)]' : snapshot.bias === 'bearish' ? 'text-[var(--red)]' : 'text-[var(--amber)]')}>
+                  {snapshot.bias}
+                </p>
+              </div>
+              {mc && (
+                <>
+                  <div className="rounded-xl p-3" style={{ background: 'rgba(255,255,255,0.035)' }}>
+                    <p className="hud-label !text-[0.56rem]">P(up) · 10K paths</p>
+                    <p className="text-[0.95rem] font-bold font-mono mt-1">{(mc.probUp * 100).toFixed(1)}%</p>
+                  </div>
+                  <div className="rounded-xl p-3" style={{ background: 'rgba(255,255,255,0.035)' }}>
+                    <p className="hud-label !text-[0.56rem]">VaR 95</p>
+                    <p className="text-[0.95rem] font-bold font-mono mt-1 text-[var(--red)]">{(mc.var95 * 100).toFixed(2)}%</p>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <button
+              onClick={() => openChart(snapshot.focusSymbol, timeframe)}
+              className="btn btn-primary w-full py-2 rounded-lg text-[0.72rem] font-semibold flex items-center justify-center gap-1.5"
+            >
+              <Layers3 size={13} /> Focused instrument ka chart kholo
+              <ArrowRight size={12} />
+            </button>
+          </section>
+
+          <section className="card p-4">
+            <h3 className="text-[0.84rem] font-bold mb-3">Latest SMC / ICT Structures</h3>
             <div className="flex flex-wrap gap-2">
-              {snapshot.zones.length === 0 && <p className="text-[0.74rem] dim">Structure build ho rahi hai…</p>}
-              {snapshot.zones.slice(-12).map((z) => (
+              {snapshot.zones.length === 0 && <p className="text-[0.72rem] dim">Structure build ho rahi hai…</p>}
+              {snapshot.zones.slice(-8).map((z) => (
                 <Chip key={z.id} tone={z.bias === 'bullish' ? 'green' : z.bias === 'bearish' ? 'red' : 'cyan'}>
-                  {z.kind.toUpperCase()} · {z.bias} · {Math.round((z.priceHigh + z.priceLow) / 2)}
+                  {z.kind.toUpperCase()} · {z.bias}
                 </Chip>
               ))}
             </div>
-          )}
-          {layer === 'wormhole' && (
-            <div className="space-y-3">
-              {[
-                { tf: '5M', note: snapshot.zones.at(-1)?.kind ?? 'scanning' },
-                { tf: '15M', note: snapshot.bias },
-                { tf: '1H', note: snapshot.confluenceScore > 60 ? 'aligned — laser confluence' : 'divergent' },
-              ].map((row) => (
-                <div key={row.tf} className="flex items-center gap-3 rounded-xl p-3" style={{ background: 'rgba(255,255,255,0.035)' }}>
-                  <span className="font-mono text-[0.74rem] font-bold w-12">{row.tf}</span>
-                  <span className="text-[0.72rem] dim capitalize flex-1">{row.note}</span>
-                  <span className={cn('w-2 h-2 rounded-full', snapshot.confluenceScore > 60 ? 'bg-[var(--green)] breathe' : 'bg-[var(--amber)]')} />
-                </div>
-              ))}
-              <p className="text-[0.66rem] dim">
-                Confluence glow score: <b className="text-[var(--accent)]">{snapshot.confluenceScore}%</b> — teenon timeframes align hone par high-probability setup banta hai.
-              </p>
-            </div>
-          )}
-          {layer === 'montecarlo' && snapshot.monteCarlo && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {[
-                { l: 'Simulated paths', v: '10,000' },
-                { l: 'P(up) terminal', v: `${(snapshot.monteCarlo.probUp * 100).toFixed(1)}%` },
-                { l: 'Median terminal', v: snapshot.monteCarlo.expected.toFixed(0) },
-                { l: 'VaR 95 worst case', v: `${(snapshot.monteCarlo.var95 * 100).toFixed(2)}%` },
-              ].map((s) => (
-                <div key={s.l} className="rounded-xl p-3" style={{ background: 'rgba(255,255,255,0.035)' }}>
-                  <p className="hud-label !text-[0.56rem]">{s.l}</p>
-                  <p className="text-[0.95rem] font-bold font-mono mt-1">{s.v}</p>
-                </div>
-              ))}
-            </div>
-          )}
-          <div className="mt-4">
-            <p className="hud-label !text-[0.58rem] mb-2">Silent indicator confirmations (backend-only)</p>
-            <div className="flex flex-wrap gap-2">
-              {snapshot.hiddenConfirmations.map((c) => <Chip key={c} tone="cyan">{c}</Chip>)}
-            </div>
-          </div>
-        </div>
-        <div className="xl:col-span-4 min-h-[300px]">
-          <Watchlist />
+            <button
+              onClick={() => setView('lab')}
+              className="btn w-full mt-4 py-2 rounded-lg text-[0.72rem] font-semibold flex items-center justify-center gap-1.5"
+            >
+              <FlaskConical size={13} /> Chart setup Strategy Lab mein inspect karo
+            </button>
+          </section>
         </div>
       </div>
     </div>

@@ -11,7 +11,7 @@ import { cn } from '../../utils/cn';
 const MODE_LABEL: Record<AppMode, string> = {
   backtest: 'Backtesting',
   paper: 'Paper Trading',
-  live: 'Live Neural',
+  live: 'Live Monitor · Sim',
   timemachine: 'AI Time Machine',
 };
 

@@ -17,18 +17,48 @@ and badges rather than dense decimal clusters.
 - **Top ticker** — live asset pills (BTC, ETH, NIFTY, BANKNIFTY, RELIANCE…),
   mode menu (Backtest / Paper / Live / Time Machine), font scaler, compact
   Emergency Square-Off, notification bell, account chip.
-- **Home** — greeting strip, Market Overview (regime + AI Health ring + top
+- **Home** — greeting strip, three Market Scanner entry cards (Crypto / Indian
+  Indices / F&O Stocks), Market Overview (regime + AI Health ring + top
   opportunities), Quick Stats, a TradingView-style 2D candlestick canvas
-  (volume, demand/supply zones, structural tags, crosshair, timeframes),
-  Watchlist tabs, and five insight cards (Strategy Lab, Hypothesis Engine,
-  Learning Loop, Trade Autopsy, Risk Centre).
-- **Miri AI mascot (bottom-right, always available)** — compact floating
-  animated avatar with a gentle bob and mood emoji badge, paired with a short
-  speech bubble (`components/assistant/AssistantMascot.tsx`) that shows only
-  the latest Hinglish line (3-line clamp, typewriter effect + typing dots).
-  No long chat panel: the bubble auto-pops on a new brain line, dismisses with
-  its X button, and the mascot click toggles it back.
-- **Bottom status bar** — demo-feed / broker / paper-mode connection states.
+  (volume, demand/supply zones, structural tags, crosshair, timeframes,
+  Strategy-Lab handoff button), Watchlist tabs, and five insight cards
+  (Strategy Lab, Hypothesis Engine, Learning Loop, Trade Autopsy, Risk Centre).
+- **Miri AI mascot (bottom-right, always parked in the corner)** — compact
+  floating animated avatar with a gentle bob, mood emoji badge and an unread
+  counter (`components/assistant/AssistantMascot.tsx`). It **never opens on its
+  own**: the panel appears only when the mascot is clicked, and offers a
+  Text/Voice mode switch (Web Speech API where available, clearly-labelled
+  simulated voice demo otherwise).
+- **Bottom status bar** — demo-feed / broker / paper-mode connection states
+  plus a permanent "Simulated · Live trading disabled" pill.
+
+## Clickable user flows
+
+1. **Home → Market Scanner** — the three home category cards (and the sidebar
+   scanner entries) preselect Crypto, Indian Indices or F&O Stocks.
+2. **Scanner → Chart** — pick a timeframe, click any instrument row/"Open" and
+   the home candlestick chart opens that symbol (`feed.ensureStream` boots a
+   full candle stream on demand for any universe symbol).
+3. **Chart → Strategy Lab** — the chart toolbar's Strategy Lab button opens the
+   selected pod with every setup condition and a live alignment checklist.
+4. **Strategy Lab → Hypothesis** — pod detail → "Hypothesis banao" lands on the
+   Hypothesis Compare tab (baseline vs proposed variant, parameter diffs).
+5. **Hypothesis → Backtest** — running the query produces an actual simulated
+   Flash Backtest report; before any test runs, only amber **SAMPLE**
+   placeholders are shown.
+6. **Backtest → Trade Autopsy** — each report links to the post-mortem with the
+   suspected failure reason and supporting trade/evidence block.
+7. **Autopsy → Learning Loop** — the Learning Loop tab compares baseline rules
+   against proposed changes; rows stay amber "untested" until a matching Flash
+   Backtest exists, then show its real GO/NO-GO result.
+8. **Any screen → Miri AI** — the corner mascot is mounted globally; click for
+   the panel and choose text or voice interaction.
+
+> **Green-status rule:** a green "profitable/GO/validated" badge is rendered
+> only for results an actual in-session test produced (Flash Backtest reports,
+> hatchery cross-validation, closed paper trades). Placeholder/sample figures
+> are amber and explicitly labelled SAMPLE. All data is simulated and live
+> trading is disabled in this prototype.
 
 ## Stack
 
@@ -95,11 +125,14 @@ src/
 │   ├── gapPredictor.ts     GIFT Nifty / globals / PCR / block-flow pre-market forecast
 │   ├── learningLog.ts      "Mistake → Correction → New Probability" post-mortems
 │   └── brain.ts            Orchestrator + event bus (single source of truth)
-├── state/store.ts          Zustand store, theme/font application
+├── state/store.ts          Zustand store: view/flow state, chart focus history, Miri panel state
 ├── components/
 │   ├── layout/             Sidebar (desktop) + MobileNav, TickerBar, StatusBar
-│   ├── home/               MiriCard, MarketOverview, QuickStats, CandleChart (canvas), Watchlist, BottomRow
-│   ├── mascot/moods.ts     Mood metadata shared by the Miri assistant card
+│   ├── home/               MarketOverview, QuickStats, CandleChart (canvas), Watchlist, BottomRow
+│   ├── assistant/          Corner Miri mascot + click-only text/voice panel
+│   ├── scanner/            InstrumentBrowser (category tabs, timeframe, open-chart)
+│   ├── backtest/           HypothesisCompare (baseline vs modified strategy)
+│   ├── mascot/moods.ts     Mood metadata shared by the Miri assistant
 │   ├── nav/                Notification bell, toast stack, risk-lockdown banner
 │   ├── panels/             Risk HUD, Greeks, positions, execution desk, vault…
 │   └── views/              Home, Scanner, Lab, Backtest, Autopsy, Risk, Settings
@@ -124,7 +157,7 @@ No component or engine module outside `marketFeed.ts` needs to change.
 2. SMC/ICT + hidden confluence — `engine/smcEngine.ts`, `engine/confluence.ts`, rendered as zones/tags on the 2D canvas (`home/CandleChart.tsx`)
 3. Predictive paths — `engine/timeMachine.ts`; Monte Carlo 10k paths in `views/ScannerView.tsx`
 4. Neural state, learning log, risk deck — `panels/`, `views/AutopsyView.tsx`, `engine/monteCarlo.ts`
-5. Miri AI assistant card + bilingual speech + bell — `home/MiriCard.tsx`, `nav/NotificationBell.tsx`
+5. Miri AI assistant + bilingual speech + bell — `assistant/AssistantMascot.tsx` (click-only corner panel, text/voice), `nav/NotificationBell.tsx`
 6. Anti-anxiety UX — Quick Stats/Market Overview cards, morphing numbers, calm Deep-Focus-Grey idle theme
 7. Dark liquidity, multi-timeframe confluence, Zen Guard, Flash sandbox — `engine/darkLiquidity.ts`, `views/ScannerView.tsx`, `engine/zenGuard.ts`, `views/BacktestView.tsx`
 8. Strategy Hatchery GA — `engine/hatchery.ts` + `engine/backtest.ts`, UI in `views/LabView.tsx`
@@ -140,8 +173,8 @@ No component or engine module outside `marketFeed.ts` needs to change.
 ## Emotion engine & event popups
 
 The assistant mood state machine (`engine/brain.ts` → `updateMoodAndTheme`,
-metadata in `components/mascot/moods.ts`) drives the status pill on the Miri
-card:
+metadata in `components/mascot/moods.ts`) drives the mood badge on the corner
+mascot and the status pill inside the click-to-open panel:
 
 | Mood | Trigger |
 | --- | --- |
@@ -149,7 +182,7 @@ card:
 | `thinking` 🤔 | Confluence sitting in the 45–68 evaluation band |
 | `happy` 😊 | Open positions running in profit |
 | `celebrating` 🎉 | Fresh winning trade closed |
-| `sad` 😢 | Losing trade closed (reflection posted in the speech bubble) |
+| `sad` 😢 | Losing trade closed (reflection queued in the assistant chat, red unread dot on the mascot) |
 | `angry` 💢 | Daily drawdown pressure beyond −1.2% |
 | `alert` ⚡ | Time-boxed whale/γ-blast burst with hysteresis (never latches) |
 | `zen` 🧘 | Zen Guard revenge-trading lockout |

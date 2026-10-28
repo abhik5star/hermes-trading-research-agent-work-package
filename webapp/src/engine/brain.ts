@@ -4,7 +4,7 @@ import type {
   PostMortem, Regime, StructuralZone, TradeRecord,
 } from './types';
 import { feed, SimulatedFeed } from './marketFeed';
-import { FOCUS_SYMBOLS, instrument } from './instruments';
+import { FOCUS_SYMBOLS, UNIVERSE, instrument } from './instruments';
 import { SmcEngine, type SmcSnapshot } from './smcEngine';
 import { snapshotIndicators, type HiddenIndicatorSnapshot } from './indicators';
 import { computeConfluence, type ConfluenceResult } from './confluence';
@@ -160,7 +160,7 @@ export class Brain extends Emitter<BrainEvents> {
 
   private attachFeed(): void {
     this.feedInstance.on('candle', ({ symbol, rolled }) => {
-      if (!FOCUS_SYMBOLS.includes(symbol)) return;
+      if (!this.smc.has(symbol)) return;
       const candles = this.feedInstance.getCandles(symbol);
       const smcEngine = this.smcFor(symbol);
       const smcSnap = smcEngine.update(candles);
@@ -222,7 +222,12 @@ export class Brain extends Emitter<BrainEvents> {
   }
 
   setFocus(symbol: string): void {
-    if (!FOCUS_SYMBOLS.includes(symbol)) return;
+    if (!UNIVERSE.some((i) => i.symbol === symbol)) return;
+    // Symbols outside the boot focus set get a stream + SMC engine on demand.
+    if (!this.smc.has(symbol)) {
+      this.feedInstance.ensureStream(symbol);
+      this.smc.set(symbol, new SmcEngine());
+    }
     this.focusSymbol = symbol;
     this.greeks = [];
     this.refreshPaths(true);

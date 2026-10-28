@@ -1,8 +1,8 @@
 import { useMemo, useRef, useState } from 'react';
 import { Star, StarOff } from 'lucide-react';
-import { useStore, brain } from '../../state/store';
+import { useStore } from '../../state/store';
 import { feed } from '../../engine/marketFeed';
-import { UNIVERSE, FOCUS_SYMBOLS, instrument } from '../../engine/instruments';
+import { UNIVERSE, instrument } from '../../engine/instruments';
 import { MorphNumber } from '../ui/Primitives';
 import { cn } from '../../utils/cn';
 
@@ -18,6 +18,7 @@ export function Watchlist() {
   const [tab, setTab] = useState<Tab>('Watchlist');
   const [favs, setFavs] = useState<Set<string>>(new Set(['BTCUSDT', '^NSEI']));
   const heartbeat = useStore((s) => s.snapshot?.heartbeat ?? 0);
+  const openChart = useStore((s) => s.openChart);
   const baseRef = useRef<Map<string, number>>(new Map());
 
   const rows = useMemo(() => {
@@ -70,9 +71,7 @@ export function Watchlist() {
         {rows.map((r) => (
           <button
             key={r.symbol}
-            onClick={() => {
-              if (FOCUS_SYMBOLS.includes(r.symbol)) brain.setFocus(r.symbol);
-            }}
+            onClick={() => openChart(r.symbol)}
             className="w-full grid grid-cols-[1fr_auto_auto] gap-x-3 items-center px-2 py-2.5 rounded-lg hover:bg-white/5 transition-colors text-left border-b border-white/5 last:border-0"
           >
             <div className="flex items-center gap-2 min-w-0">

@@ -2,26 +2,28 @@ import {
   Home, Radar, Bitcoin, ListChecks, BarChart3, TrendingUp, FlaskConical, History,
   ScanSearch, BrainCircuit, ShieldHalf, LineChart, Plug, Settings as SettingsIcon,
 } from 'lucide-react';
-import { useStore, type ViewKey } from '../../state/store';
+import { useStore, type ViewKey, type ScannerCategory, type AutopsyTab } from '../../state/store';
 import { cn } from '../../utils/cn';
 
 interface NavItem {
   label: string;
   icon: typeof Home;
   view: ViewKey;
+  scannerCategory?: ScannerCategory;
+  autopsyTab?: AutopsyTab;
 }
 
 const NAV: NavItem[] = [
   { label: 'Home', icon: Home, view: 'home' },
-  { label: 'AI Market Scanner', icon: Radar, view: 'scanner' },
-  { label: 'Crypto Trading', icon: Bitcoin, view: 'scanner' },
-  { label: 'Indian Index Options', icon: ListChecks, view: 'scanner' },
-  { label: 'Stock Options & Futures', icon: BarChart3, view: 'scanner' },
-  { label: 'High Beta Stocks', icon: TrendingUp, view: 'scanner' },
+  { label: 'AI Market Scanner', icon: Radar, view: 'scanner', scannerCategory: 'indices' },
+  { label: 'Crypto Trading', icon: Bitcoin, view: 'scanner', scannerCategory: 'crypto' },
+  { label: 'Indian Index Options', icon: ListChecks, view: 'scanner', scannerCategory: 'indices' },
+  { label: 'Stock Options & Futures', icon: BarChart3, view: 'scanner', scannerCategory: 'fno' },
+  { label: 'High Beta Stocks', icon: TrendingUp, view: 'scanner', scannerCategory: 'fno' },
   { label: 'Strategy Lab', icon: FlaskConical, view: 'lab' },
   { label: 'Backtesting & Paper Trading', icon: History, view: 'backtest' },
-  { label: 'Trade Autopsy', icon: ScanSearch, view: 'autopsy' },
-  { label: 'AI Learning Memory', icon: BrainCircuit, view: 'autopsy' },
+  { label: 'Trade Autopsy', icon: ScanSearch, view: 'autopsy', autopsyTab: 'postmortem' },
+  { label: 'AI Learning Memory', icon: BrainCircuit, view: 'autopsy', autopsyTab: 'learning' },
   { label: 'Risk Centre', icon: ShieldHalf, view: 'risk' },
   { label: 'Performance & Reports', icon: LineChart, view: 'risk' },
   { label: 'Data Connections', icon: Plug, view: 'settings' },
@@ -31,8 +33,16 @@ const NAV: NavItem[] = [
 export function Sidebar() {
   const view = useStore((s) => s.view);
   const setView = useStore((s) => s.setView);
+  const setScannerCategory = useStore((s) => s.setScannerCategory);
+  const setAutopsyTab = useStore((s) => s.setAutopsyTab);
   const beginner = useStore((s) => s.beginnerMode);
   const setBeginner = useStore((s) => s.setBeginnerMode);
+
+  const go = (item: NavItem) => {
+    if (item.scannerCategory) setScannerCategory(item.scannerCategory);
+    if (item.autopsyTab) setAutopsyTab(item.autopsyTab);
+    setView(item.view);
+  };
 
   return (
     <aside className="w-[218px] shrink-0 h-full flex-col card p-3 overflow-y-auto hidden lg:flex">
@@ -57,7 +67,7 @@ export function Sidebar() {
           return (
             <button
               key={item.label}
-              onClick={() => setView(item.view)}
+              onClick={() => go(item)}
               className={cn(
                 'w-full flex items-center gap-3 px-3 py-2 rounded-xl text-[0.78rem] font-medium transition-all duration-200 text-left',
                 active

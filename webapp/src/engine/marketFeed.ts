@@ -154,6 +154,12 @@ export class SimulatedFeed extends Emitter<FeedEvents> implements FeedAdapter {
     this.sandboxTimer = setInterval(() => this.sandboxTick(), 2000);
   }
 
+  /** Lazily boot a full candle + order-book stream for any universe symbol
+   *  (e.g. when the scanner opens a chart that was not in the focus set). */
+  ensureStream(symbol: string): void {
+    if (!this.streams.has(symbol)) this.bootStream(symbol);
+  }
+
   private tick(): void {
     this.now += 1000;
     for (const [symbol, s] of this.streams) {

@@ -1,4 +1,4 @@
-import { Wifi, WifiOff, FlaskConical, Quote } from 'lucide-react';
+import { Wifi, WifiOff, FlaskConical, Quote, ShieldOff } from 'lucide-react';
 import { useStore } from '../../state/store';
 
 export function StatusBar() {
@@ -34,6 +34,13 @@ export function StatusBar() {
           value={(snapshot?.mode ?? 'paper').replace('-', ' ')}
           tone="cyan"
         />
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl" style={{ background: 'rgba(224,165,47,0.1)', border: '1px solid rgba(224,165,47,0.35)' }}>
+          <ShieldOff size={14} className="text-[var(--amber)]" />
+          <div className="leading-tight">
+            <p className="text-[0.58rem] dim">Data</p>
+            <p className="text-[0.68rem] font-semibold text-[var(--amber)]">Simulated · Live trading disabled</p>
+          </div>
+        </div>
       </div>
 
       <div className="hidden 2xl:flex items-center gap-2 text-[0.66rem] dim max-w-[260px]">

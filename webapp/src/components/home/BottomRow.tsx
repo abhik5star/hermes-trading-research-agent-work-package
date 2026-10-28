@@ -68,6 +68,7 @@ export function StrategyLabCard({ onOpen }: { onOpen: () => void }) {
           </div>
         ))}
       </div>
+      <p className="text-[0.56rem] dim mt-2.5">Green badges sirf simulated cross-validation pass karne pe</p>
     </CardShell>
   );
 }
@@ -95,6 +96,7 @@ export function HypothesisCard({ onOpen }: { onOpen: () => void }) {
           </div>
         ))}
       </div>
+      <p className="text-[0.56rem] dim mt-2.5">Validated = actual Flash Backtest ya CV result (simulated)</p>
     </CardShell>
   );
 }

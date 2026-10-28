@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { CandlestickChart, Crosshair, Maximize2, Settings2, TrendingUp } from 'lucide-react';
-import { useStore, brain } from '../../state/store';
+import { CandlestickChart, Crosshair, Maximize2, Settings2, TrendingUp, FlaskConical } from 'lucide-react';
+import { useStore } from '../../state/store';
 import { feed } from '../../engine/marketFeed';
-import { FOCUS_SYMBOLS, instrument } from '../../engine/instruments';
+import { instrument } from '../../engine/instruments';
 import type { Candle } from '../../engine/types';
 import { cn } from '../../utils/cn';
 
@@ -11,10 +11,14 @@ const VIEW = 84;
 
 export function CandleChart() {
   const snapshot = useStore((s) => s.snapshot);
-  const focus = useStore((s) => s.snapshot?.focusSymbol ?? FOCUS_SYMBOLS[0]);
+  const focus = snapshot?.focusSymbol ?? useStore.getState().focusHistory[0];
+  const focusHistory = useStore((s) => s.focusHistory);
   const timeframe = useStore((s) => s.timeframe);
   const setTimeframe = useStore((s) => s.setTimeframe);
   const beginner = useStore((s) => s.beginnerMode);
+  const selectFocus = useStore((s) => s.selectFocus);
+  const setSelectedPodId = useStore((s) => s.setSelectedPodId);
+  const setView = useStore((s) => s.setView);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const [hover, setHover] = useState<{ x: number; y: number } | null>(null);
@@ -178,12 +182,12 @@ export function CandleChart() {
 
   return (
     <section className="card p-4 h-full flex flex-col">
-      {/* symbol + timeframe tabs */}
+      {/* symbol tabs — every chart opened from the scanner is added here */}
       <div className="flex items-center gap-2 flex-wrap mb-3">
-        {FOCUS_SYMBOLS.map((s) => (
+        {focusHistory.map((s) => (
           <button
             key={s}
-            onClick={() => brain.setFocus(s)}
+            onClick={() => selectFocus(s)}
             className={cn(
               'px-3 py-1.5 rounded-lg text-[0.72rem] font-semibold transition-all flex items-center gap-1.5',
               s === focus ? 'bg-[var(--accent-soft)] text-white border border-[rgba(58,168,232,0.4)]' : 'dim btn',
@@ -217,6 +221,18 @@ export function CandleChart() {
           ))}
         </div>
         <div className="ml-auto flex items-center gap-1.5 dim">
+          {/* Flow 3 — Chart → Strategy Lab setup inspection */}
+          <button
+            onClick={() => {
+              if (snapshot) setSelectedPodId(snapshot.activeGenome.id);
+              setView('lab');
+            }}
+            className="btn btn-primary h-8 px-3 grid place-items-center rounded-lg flex items-center gap-1.5 !text-[0.68rem] font-semibold"
+            title="Is setup ki conditions Strategy Lab mein inspect karo"
+          >
+            <FlaskConical size={13} />
+            <span className="hidden md:inline">Strategy Lab</span>
+          </button>
           <button className="btn w-8 h-8 grid place-items-center rounded-lg"><TrendingUp size={14} /></button>
           <button className="btn w-8 h-8 grid place-items-center rounded-lg"><Crosshair size={14} /></button>
           <button className="btn w-8 h-8 grid place-items-center rounded-lg"><Settings2 size={14} /></button>
