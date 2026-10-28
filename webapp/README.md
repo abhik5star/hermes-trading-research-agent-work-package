@@ -29,6 +29,15 @@ node --experimental-strip-types scripts/smoke.ts   # headless engine smoke test
 #  npx esbuild scripts/smoke.ts --bundle --platform=node --format=esm --outfile=scripts/.smoke.mjs && node scripts/.smoke.mjs)
 ```
 
+### Windows one-click launchers
+
+- **`start-dashboard.bat`** — double-click to install dependencies (first run
+  only), start the dev server, and open `http://localhost:5173` automatically.
+- **`build-dashboard.bat`** — type-checks, builds the production bundle, and
+  serves it on `http://localhost:4173` via `npm run preview`.
+
+Both check for Node.js first and pause on error so the window stays readable.
+
 ## Architecture
 
 ```
