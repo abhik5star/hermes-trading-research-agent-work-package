@@ -10,8 +10,8 @@ const TONE_GLOW: Record<AlertTone, string> = {
   info: 'rgba(111,179,255,0.55)',
   success: 'rgba(45,255,176,0.55)',
   warning: 'rgba(255,174,59,0.6)',
-  danger: 'rgba(255,84,112,0.65)',
-  whale: 'rgba(157,107,255,0.65)',
+  danger: 'rgba(229,83,107,0.65)',
+  whale: 'rgba(143,127,224,0.65)',
   hedge: 'rgba(111,179,255,0.7)',
 };
 
@@ -49,14 +49,13 @@ export function NotificationBell() {
       <button
         onClick={() => toggleBell()}
         className="relative w-11 h-11 rounded-2xl card grid place-items-center transition-transform hover:scale-105"
-        style={{ boxShadow: latest ? `0 0 22px ${glow}` : undefined }}
         title="Ambient notification center"
       >
         <Bell size={18} className={cn(ringing && 'bell-ring')} style={{ color: latest ? glow : undefined }} />
         {unread > 0 && (
           <span
-            className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full text-[0.62rem] font-bold grid place-items-center text-void-950"
-            style={{ background: glow, boxShadow: `0 0 12px ${glow}` }}
+            className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full text-[0.62rem] font-bold grid place-items-center text-white"
+            style={{ background: glow }}
           >
             {unread}
           </span>

@@ -15,7 +15,7 @@ export function RiskLockdownBanner() {
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: -40, opacity: 0 }}
           className="fixed top-24 left-1/2 -translate-x-1/2 z-[65] glass-strong rounded-2xl px-5 py-3 flex items-center gap-4"
-          style={{ border: '1px solid rgba(255,84,112,0.5)', boxShadow: '0 0 34px rgba(255,84,112,0.35)' }}
+          style={{ border: '1px solid rgba(229,83,107,0.55)' }}
         >
           <LockKeyhole size={18} className="text-neon-red breathe" />
           <div>

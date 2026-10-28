@@ -14,6 +14,7 @@ import { SettingsView } from './views/SettingsView';
 import { ZenOverlay } from './components/ZenOverlay';
 import { RiskLockdownBanner } from './components/nav/RiskLockdownBanner';
 import { ToastStack } from './components/nav/ToastStack';
+import { AssistantMascot } from './components/assistant/AssistantMascot';
 import { BrainCircuit } from 'lucide-react';
 
 /** Zen Guard interaction telemetry — erratic mouse + tab thrashing. */
@@ -46,7 +47,7 @@ function BootScreen() {
         <div className="w-14 h-14 mx-auto rounded-2xl grid place-items-center breathe" style={{ background: 'var(--accent-soft)', border: '1px solid var(--panel-border)' }}>
           <BrainCircuit size={28} className="text-[var(--accent)]" />
         </div>
-        <p className="mt-4 shimmer-text font-semibold text-[0.9rem]">Neural brain ko wake kar rahe hain…</p>
+        <p className="mt-4 font-semibold text-[0.9rem] dim">Neural brain ko wake kar rahe hain…</p>
         <p className="text-[0.7rem] dim mt-1">demo market feeds connect ho rahe hain</p>
       </div>
     </div>
@@ -103,6 +104,7 @@ export default function App() {
 
       {/* Global overlays */}
       <ToastStack />
+      <AssistantMascot />
       <RiskLockdownBanner />
       <ZenOverlay />
     </div>

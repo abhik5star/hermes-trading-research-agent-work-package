@@ -30,7 +30,7 @@ export function NeuralStateWidget() {
             initial={{ scale: 0.9, opacity: 0.6 }}
             animate={{ scale: 1, opacity: 1 }}
             className="rounded-xl py-2 text-center font-bold tracking-[0.25em] text-sm"
-            style={{ color: actionColor, border: `1px solid ${actionColor}55`, background: `${actionColor}14`, textShadow: `0 0 14px ${actionColor}66` }}
+            style={{ color: actionColor, border: `1px solid ${actionColor}55`, background: `${actionColor}14` }}
           >
             {snapshot.neuralAction}
           </motion.div>

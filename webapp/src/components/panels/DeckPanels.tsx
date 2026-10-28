@@ -52,9 +52,8 @@ export function FundingLiquidation() {
                 background: entry
                   ? 'rgba(45,255,176,0.65)'
                   : hot
-                    ? `rgba(255,84,112,${0.25 + v * 0.55})`
+                    ? `rgba(229,83,107,${0.25 + v * 0.55})`
                     : `rgba(77,125,255,${0.06 + v * 0.2})`,
-                boxShadow: entry ? '0 0 12px rgba(45,255,176,0.7)' : hot ? '0 0 8px rgba(255,84,112,0.4)' : undefined,
               }}
               title={entry ? 'AI counter-retail entry zone' : hot ? 'High liquidation density' : undefined}
             />
@@ -102,7 +101,7 @@ export function ExecutionModule() {
                 <div className="flex-1 h-4 rounded-md bg-white/5 overflow-hidden relative">
                   <div
                     className="h-full rounded-md"
-                    style={{ width: `${(s.qty / order.totalQty) * 100}%`, background: 'linear-gradient(90deg, rgba(56,232,255,0.5), rgba(77,125,255,0.6))' }}
+                    style={{ width: `${(s.qty / order.totalQty) * 100}%`, background: 'rgba(58,168,232,0.55)' }}
                   />
                 </div>
                 <span className="text-[0.62rem] font-mono dim w-16 text-right">{s.qty} @ {s.price.toFixed(2)}</span>
@@ -132,7 +131,6 @@ export function InsuranceVault() {
           className="w-14 h-14 rounded-2xl grid place-items-center shrink-0"
           style={{
             background: active ? 'rgba(111,179,255,0.18)' : 'rgba(255,255,255,0.05)',
-            boxShadow: active ? '0 0 26px rgba(111,179,255,0.5)' : undefined,
           }}
         >
           <ShieldCheck size={26} className={active ? 'text-neon-steel' : 'dim'} />

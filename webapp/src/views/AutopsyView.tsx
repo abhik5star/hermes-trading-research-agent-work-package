@@ -28,7 +28,7 @@ export function AutopsyView() {
                 </div>
                 <p className="text-[0.66rem] dim mt-1">{pm.outcome}</p>
               </div>
-              <div className="rounded-xl px-3 py-2 text-right shrink-0" style={{ border: '1px solid rgba(22,217,156,0.4)', background: 'rgba(22,217,156,0.08)' }}>
+              <div className="rounded-xl px-3 py-2 text-right shrink-0" style={{ border: '1px solid rgba(29,184,134,0.4)', background: 'rgba(29,184,134,0.08)' }}>
                 <p className="text-[0.54rem] dim tracking-widest uppercase">New profit probability</p>
                 <p className="text-[1rem] font-mono font-bold text-[var(--green)] leading-tight">{pm.newProbability.toFixed(1)}%</p>
                 <p className="text-[0.62rem] font-mono text-[var(--green)]">[+{pm.delta.toFixed(1)}%]</p>
@@ -36,13 +36,13 @@ export function AutopsyView() {
             </header>
 
             <div className="mt-4 space-y-3">
-              <section className="rounded-xl p-3" style={{ background: 'rgba(255,84,112,0.07)', border: '1px solid rgba(255,84,112,0.2)' }}>
+              <section className="rounded-xl p-3" style={{ background: 'rgba(229,83,107,0.07)', border: '1px solid rgba(229,83,107,0.2)' }}>
                 <h4 className="text-[0.7rem] font-bold text-[var(--red)] flex items-center gap-1.5">
                   <BrainCircuit size={12} /> Kya Galti Hui? <span className="dim font-normal">(What went wrong?)</span>
                 </h4>
                 <p className="text-[0.72rem] leading-relaxed mt-1.5 text-white/80">{pm.mistake}</p>
               </section>
-              <section className="rounded-xl p-3" style={{ background: 'rgba(22,217,156,0.07)', border: '1px solid rgba(22,217,156,0.2)' }}>
+              <section className="rounded-xl p-3" style={{ background: 'rgba(29,184,134,0.07)', border: '1px solid rgba(29,184,134,0.2)' }}>
                 <h4 className="text-[0.7rem] font-bold text-[var(--green)] flex items-center gap-1.5">
                   <TrendingUp size={12} /> Kya Sudhar Hua? <span className="dim font-normal">(What was corrected?)</span>
                 </h4>

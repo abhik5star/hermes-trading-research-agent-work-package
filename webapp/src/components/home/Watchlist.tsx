@@ -94,7 +94,7 @@ export function Watchlist() {
             <span
               className={cn(
                 'text-[0.7rem] font-mono font-semibold text-right w-16 px-1.5 py-0.5 rounded-md',
-                r.chg >= 0 ? 'text-[var(--green)] bg-[rgba(22,217,156,0.08)]' : 'text-[var(--red)] bg-[rgba(255,84,112,0.08)]',
+                r.chg >= 0 ? 'text-[var(--green)] bg-[rgba(29,184,134,0.08)]' : 'text-[var(--red)] bg-[rgba(229,83,107,0.08)]',
               )}
             >
               {r.chg >= 0 ? '+' : ''}{r.chg.toFixed(2)}%

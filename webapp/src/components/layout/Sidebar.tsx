@@ -40,7 +40,7 @@ export function Sidebar() {
       <div className="flex items-center gap-2.5 px-2 py-2 mb-3">
         <div
           className="w-9 h-9 rounded-xl grid place-items-center shrink-0"
-          style={{ background: 'linear-gradient(135deg, rgba(39,214,245,0.25), rgba(77,125,255,0.3))', border: '1px solid rgba(39,214,245,0.4)' }}
+          style={{ background: 'var(--accent-soft)', border: '1px solid rgba(58,168,232,0.4)' }}
         >
           <BrainCircuit size={18} className="text-[var(--accent)]" />
         </div>
@@ -61,7 +61,7 @@ export function Sidebar() {
               className={cn(
                 'w-full flex items-center gap-3 px-3 py-2 rounded-xl text-[0.78rem] font-medium transition-all duration-200 text-left',
                 active
-                  ? 'bg-[var(--accent-soft)] text-white border border-[rgba(39,214,245,0.35)]'
+                  ? 'bg-[var(--accent-soft)] text-white border border-[rgba(58,168,232,0.35)]'
                   : 'dim hover:text-white hover:bg-white/5 border border-transparent',
               )}
             >
@@ -73,7 +73,7 @@ export function Sidebar() {
       </nav>
 
       {/* Beginner mode */}
-      <div className="mt-3 rounded-xl p-3" style={{ background: 'rgba(39,214,245,0.07)', border: '1px solid var(--panel-border)' }}>
+      <div className="mt-3 rounded-xl p-3" style={{ background: 'rgba(58,168,232,0.07)', border: '1px solid var(--panel-border)' }}>
         <div className="flex items-center justify-between">
           <span className="text-[0.78rem] font-semibold">Beginner Mode</span>
           <button className={cn('toggle', beginner && 'on')} onClick={() => setBeginner(!beginner)} aria-label="Beginner mode" />

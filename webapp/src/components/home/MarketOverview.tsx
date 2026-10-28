@@ -15,9 +15,9 @@ export function MarketOverview() {
   }));
 
   const toneClass = (t: string) =>
-    t === 'Bullish' ? 'text-[var(--green)] bg-[rgba(22,217,156,0.1)] border-[rgba(22,217,156,0.3)]'
-    : t === 'Bearish' ? 'text-[var(--red)] bg-[rgba(255,84,112,0.1)] border-[rgba(255,84,112,0.3)]'
-    : 'text-[var(--amber)] bg-[rgba(255,194,75,0.1)] border-[rgba(255,194,75,0.3)]';
+    t === 'Bullish' ? 'text-[var(--green)] bg-[rgba(29,184,134,0.1)] border-[rgba(29,184,134,0.3)]'
+    : t === 'Bearish' ? 'text-[var(--red)] bg-[rgba(229,83,107,0.1)] border-[rgba(229,83,107,0.3)]'
+    : 'text-[var(--amber)] bg-[rgba(224,165,47,0.1)] border-[rgba(224,165,47,0.3)]';
 
   return (
     <section className="card p-4 h-full">
@@ -30,8 +30,8 @@ export function MarketOverview() {
             className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-[0.8rem] font-semibold"
             style={{
               color: bullish ? 'var(--green)' : 'var(--red)',
-              background: bullish ? 'rgba(22,217,156,0.1)' : 'rgba(255,84,112,0.1)',
-              border: `1px solid ${bullish ? 'rgba(22,217,156,0.3)' : 'rgba(255,84,112,0.3)'}`,
+              background: bullish ? 'rgba(29,184,134,0.1)' : 'rgba(229,83,107,0.1)',
+              border: `1px solid ${bullish ? 'rgba(29,184,134,0.3)' : 'rgba(229,83,107,0.3)'}`,
             }}
           >
             <ArrowUpRight size={14} className={bullish ? '' : 'rotate-90'} />

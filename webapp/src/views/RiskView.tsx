@@ -18,14 +18,14 @@ export function RiskView() {
         <button
           onClick={() => brain.panicSquareOff()}
           className="btn px-4 py-2.5 text-[0.76rem] font-bold flex items-center gap-2"
-          style={{ borderColor: 'rgba(255,84,112,0.55)', color: '#ff9daf', background: 'rgba(255,84,112,0.08)' }}
+          style={{ borderColor: 'rgba(229,83,107,0.55)', color: '#ff9daf', background: 'rgba(229,83,107,0.08)' }}
         >
           <ShieldAlert size={15} /> Emergency Square-Off
         </button>
       </div>
 
       {locked && (
-        <div className="card p-4 flex items-center gap-3" style={{ borderColor: 'rgba(255,84,112,0.5)' }}>
+        <div className="card p-4 flex items-center gap-3" style={{ borderColor: 'rgba(229,83,107,0.5)' }}>
           <ShieldAlert className="text-[var(--red)] breathe" size={18} />
           <div className="flex-1">
             <p className="text-[0.82rem] font-bold text-[var(--red)]">2% Daily Drawdown Lockdown Active</p>

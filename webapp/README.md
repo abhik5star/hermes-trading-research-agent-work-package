@@ -1,10 +1,12 @@
 # Hermes Neural — Autonomous Self-Learning AI Trading Brain Dashboard
 
-A clean, professional **trading-terminal-style web dashboard** (dark navy
-fintech look, 2D canvas charts — no holograms or 3D clutter) for an autonomous
-SMC/ICT trading brain, with a built-in Hinglish AI assistant ("Miri AI").
-Complex indicators are processed silently in the engine layer and surfaced as
-plain scores, zones and badges rather than dense decimal clusters.
+A clean, professional **flat trading-terminal-style web dashboard** (solid dark
+navy panels, muted accent colors, 2D canvas charts — no neon glow, glassmorphism
+or 3D clutter) for an autonomous SMC/ICT trading brain. The Hinglish AI
+assistant ("Miri AI") lives in an **animated floating mascot widget pinned to
+the bottom-right corner** — click it to open the chat panel. Complex indicators
+are processed silently in the engine layer and surfaced as plain scores, zones
+and badges rather than dense decimal clusters.
 
 ## Interface map
 
@@ -15,11 +17,15 @@ plain scores, zones and badges rather than dense decimal clusters.
 - **Top ticker** — live asset pills (BTC, ETH, NIFTY, BANKNIFTY, RELIANCE…),
   mode menu (Backtest / Paper / Live / Time Machine), font scaler, compact
   Emergency Square-Off, notification bell, account chip.
-- **Home** — Miri AI assistant card, Market Overview (regime + AI Health ring
-  + top opportunities), Quick Stats, a TradingView-style 2D candlestick canvas
+- **Home** — greeting strip, Market Overview (regime + AI Health ring + top
+  opportunities), Quick Stats, a TradingView-style 2D candlestick canvas
   (volume, demand/supply zones, structural tags, crosshair, timeframes),
   Watchlist tabs, and five insight cards (Strategy Lab, Hypothesis Engine,
   Learning Loop, Trade Autopsy, Risk Centre).
+- **Miri AI mascot (bottom-right, always available)** — floating animated
+  avatar with a gentle bob, mood emoji badge, unread counter, expandable chat
+  panel (`components/assistant/AssistantMascot.tsx`) with typewriter replies,
+  typing dots, quick prompts and a demo mic button.
 - **Bottom status bar** — demo-feed / broker / paper-mode connection states.
 
 ## Stack

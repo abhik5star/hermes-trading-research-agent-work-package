@@ -29,7 +29,7 @@ export function ZenOverlay() {
             initial={{ scale: 0.94, y: 20 }}
             animate={{ scale: 1, y: 0 }}
             className="card p-8 max-w-md w-full text-center"
-            style={{ borderColor: 'rgba(157,140,255,0.4)', boxShadow: '0 0 50px rgba(157,140,255,0.2)' }}
+            style={{ borderColor: 'rgba(143,127,224,0.45)' }}
           >
             <div className="flex items-center justify-center gap-2 text-[#9d8cff] mb-3">
               <Flower2 size={18} />

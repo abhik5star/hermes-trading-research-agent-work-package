@@ -41,11 +41,11 @@ function CardShell({
 function Badge({ label }: { label: PodStatus | string }) {
   const tone =
     label.startsWith('Highly') || label === 'Ready' || label === 'Validated'
-      ? { c: 'var(--green)', bg: 'rgba(22,217,156,0.1)' }
+      ? { c: 'var(--green)', bg: 'rgba(29,184,134,0.1)' }
       : label.startsWith('Failed') || label === 'Rejected'
-        ? { c: 'var(--red)', bg: 'rgba(255,84,112,0.1)' }
+        ? { c: 'var(--red)', bg: 'rgba(229,83,107,0.1)' }
         : label === 'Testing' || label.startsWith('Evolving') || label.startsWith('Cross')
-          ? { c: 'var(--amber)', bg: 'rgba(255,194,75,0.1)' }
+          ? { c: 'var(--amber)', bg: 'rgba(224,165,47,0.1)' }
           : { c: 'var(--accent)', bg: 'var(--accent-soft)' };
   return (
     <span className="chip !text-[0.58rem] !py-0.5" style={{ color: tone.c, background: tone.bg, borderColor: `${tone.c}44` }}>
@@ -58,7 +58,7 @@ export function StrategyLabCard({ onOpen }: { onOpen: () => void }) {
   const pods = useStore((s) => s.snapshot?.pods ?? []);
   const list = pods.slice(0, 4);
   return (
-    <CardShell icon={FlaskConical} title="Strategy Lab" subtitle="AI se test ki gayi top strategies" accent="#27d6f5" onOpen={onOpen}>
+    <CardShell icon={FlaskConical} title="Strategy Lab" subtitle="AI se test ki gayi top strategies" accent="#3aa8e8" onOpen={onOpen}>
       <div className="space-y-2.5">
         {list.map((p, i) => (
           <div key={p.genome.id} className="flex items-center gap-2">
@@ -115,8 +115,8 @@ export function LearningLoopCard({ onOpen }: { onOpen: () => void }) {
               <span
                 className={cn(
                   'w-5 h-5 rounded-full grid place-items-center shrink-0 text-[0.6rem] font-bold',
-                  done && 'bg-[rgba(22,217,156,0.18)] text-[var(--green)] border border-[rgba(22,217,156,0.4)]',
-                  active && 'bg-[var(--accent-soft)] text-[var(--accent)] border border-[rgba(39,214,245,0.5)] breathe',
+                  done && 'bg-[rgba(29,184,134,0.18)] text-[var(--green)] border border-[rgba(29,184,134,0.4)]',
+                  active && 'bg-[var(--accent-soft)] text-[var(--accent)] border border-[rgba(58,168,232,0.5)] breathe',
                   locked && 'bg-white/5 dim border border-white/10',
                 )}
               >

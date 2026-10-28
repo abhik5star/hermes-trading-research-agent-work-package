@@ -132,7 +132,7 @@ export function TickerBar() {
         <div className="flex items-center gap-2.5 card pl-1.5 pr-3.5 py-1.5">
           <div
             className="w-8 h-8 rounded-lg grid place-items-center text-[0.72rem] font-bold"
-            style={{ background: 'linear-gradient(135deg, #4d7dff, #9d6bff)', color: '#fff' }}
+            style={{ background: 'var(--accent-soft)', color: 'var(--accent)', border: '1px solid rgba(58,168,232,0.35)' }}
           >
             A
           </div>
@@ -157,7 +157,7 @@ function PanicButtonCompact() {
     <button
       onClick={() => (armed ? (brain.panicSquareOff(), setArmed(false)) : setArmed(true))}
       className={cn('btn flex items-center gap-1.5 px-3 py-2 text-[0.7rem] font-semibold', armed && 'btn-primary')}
-      style={armed ? { borderColor: 'rgba(255,84,112,0.7)', color: '#ffd7dd' } : { color: '#ff9daf' }}
+      style={armed ? { borderColor: 'rgba(229,83,107,0.7)', color: '#ffd7dd' } : { color: '#ff9daf' }}
       title="Emergency Square-Off"
     >
       <ShieldAlert size={14} />

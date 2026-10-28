@@ -112,7 +112,7 @@ export function ProgressRing({
           strokeDasharray={c}
           animate={{ strokeDashoffset: c * (1 - Math.min(1, Math.max(0, value))) }}
           transition={{ type: 'spring', stiffness: 60, damping: 16 }}
-          style={{ filter: `drop-shadow(0 0 6px ${color})` }}
+          style={{ filter: 'none' }}
         />
       </svg>
       <div className="absolute inset-0 grid place-items-center">{children}</div>
@@ -126,7 +126,7 @@ export function Bar({ value, max, color = 'var(--accent)', className }: { value:
     <div className={cn('h-1.5 rounded-full bg-white/10 overflow-hidden', className)}>
       <motion.div
         className="h-full rounded-full"
-        style={{ background: color, boxShadow: `0 0 10px ${color}` }}
+        style={{ background: color }}
         animate={{ width: `${pct}%` }}
         transition={{ type: 'spring', stiffness: 70, damping: 18 }}
       />

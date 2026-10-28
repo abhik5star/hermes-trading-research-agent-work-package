@@ -108,7 +108,7 @@ function ConnectionRow({ name, status, ok, detail }: { name: string; status: str
       </div>
       <span
         className="chip !text-[0.6rem]"
-        style={{ color: ok ? 'var(--green)' : 'var(--red)', borderColor: ok ? 'rgba(22,217,156,0.35)' : 'rgba(255,84,112,0.35)' }}
+        style={{ color: ok ? 'var(--green)' : 'var(--red)', borderColor: ok ? 'rgba(29,184,134,0.35)' : 'rgba(229,83,107,0.35)' }}
       >
         {status}
       </span>

@@ -66,14 +66,14 @@ export function ToastStack() {
               className="glass-strong toast-shake rounded-2xl p-3.5 pointer-events-auto relative overflow-hidden"
               style={{
                 border: `1px solid ${tone.color}55`,
-                boxShadow: `0 10px 40px rgba(2,6,18,0.6), 0 0 26px ${tone.color}33`,
+                boxShadow: '0 10px 30px rgba(3,7,18,0.45)',
               }}
             >
               {/* glow strip */}
               <motion.span
                 className="absolute left-0 top-0 bottom-0 w-[3px]"
-                style={{ background: tone.color, boxShadow: `0 0 14px ${tone.color}` }}
-                animate={{ opacity: [0.5, 1, 0.5] }}
+                style={{ background: tone.color }}
+                animate={{ opacity: [0.55, 1, 0.55] }}
                 transition={{ duration: 1.6, repeat: Infinity }}
               />
               <div className="flex items-start gap-3 pl-1.5">
@@ -108,7 +108,7 @@ export function ToastStack() {
                   <span className="block h-[2px] rounded-full mt-2 bg-white/10 overflow-hidden">
                     <motion.span
                       className="block h-full rounded-full"
-                      style={{ background: tone.color, boxShadow: `0 0 8px ${tone.color}` }}
+                      style={{ background: tone.color }}
                       initial={{ width: '100%' }}
                       animate={{ width: '0%' }}
                       transition={{ duration: LIFETIME / 1000, ease: 'linear' }}

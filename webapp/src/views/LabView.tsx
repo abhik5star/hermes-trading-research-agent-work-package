@@ -102,7 +102,7 @@ export function LabView() {
                 {symbols.map((sym) => {
                   const cell = matrix.find((c) => c.strategyId === sid && c.symbol === sym);
                   const fit = cell?.fit ?? 20;
-                  const bg = fit > 85 ? 'rgba(22,217,156,0.75)' : fit > 68 ? 'rgba(39,214,245,0.5)' : fit > 45 ? 'rgba(255,194,75,0.32)' : 'rgba(148,163,184,0.16)';
+                  const bg = fit > 85 ? 'rgba(29,184,134,0.75)' : fit > 68 ? 'rgba(58,168,232,0.5)' : fit > 45 ? 'rgba(224,165,47,0.32)' : 'rgba(148,163,184,0.16)';
                   return <div key={sym} title={`${nameFor(sid)} × ${sym} — ${fit.toFixed(1)}%`} className="aspect-square rounded-[4px] transition-all duration-700" style={{ background: bg }} />;
                 })}
               </div>
@@ -110,8 +110,8 @@ export function LabView() {
           ))}
         </div>
         <div className="flex gap-4 mt-3 text-[0.62rem] dim flex-wrap">
-          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm" style={{ background: 'rgba(22,217,156,0.75)' }} /> High fit · profit factor streaming</span>
-          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm" style={{ background: 'rgba(255,194,75,0.4)' }} /> Low volatility · idling</span>
+          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm" style={{ background: 'rgba(29,184,134,0.75)' }} /> High fit · profit factor streaming</span>
+          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm" style={{ background: 'rgba(224,165,47,0.4)' }} /> Low volatility · idling</span>
         </div>
 
         <div className="mt-4 space-y-2">

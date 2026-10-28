@@ -1,5 +1,4 @@
 import { useStore } from '../state/store';
-import { MiriCard } from '../components/home/MiriCard';
 import { MarketOverview } from '../components/home/MarketOverview';
 import { QuickStats } from '../components/home/QuickStats';
 import { CandleChart } from '../components/home/CandleChart';
@@ -10,17 +9,29 @@ import {
 
 export function HomeView() {
   const setView = useStore((s) => s.setView);
+  const snapshot = useStore((s) => s.snapshot);
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 items-stretch">
-        <div className="xl:col-span-5 min-h-[210px]">
-          <MiriCard />
+      {/* plain page heading */}
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div>
+          <h1 className="text-[1.15rem] font-bold">Good to see you, Abhishek</h1>
+          <p className="text-[0.72rem] dim mt-0.5">
+            Aaj ka market snapshot — {snapshot?.focusSymbol.replace('_PERP', '')} pe focus hai
+          </p>
         </div>
-        <div className="xl:col-span-4">
+        <span className="chip">
+          <span className="w-1.5 h-1.5 rounded-full bg-[var(--green)] pulse-dot" />
+          Demo feed live · all values simulated
+        </span>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 items-stretch">
+        <div className="xl:col-span-7">
           <MarketOverview />
         </div>
-        <div className="xl:col-span-3">
+        <div className="xl:col-span-5">
           <QuickStats />
         </div>
       </div>

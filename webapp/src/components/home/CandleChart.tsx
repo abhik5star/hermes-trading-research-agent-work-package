@@ -79,7 +79,7 @@ export function CandleChart() {
     for (const z of snapshot?.zones ?? []) {
       if (z.priceHigh < min || z.priceLow > max) continue;
       const isDemand = z.bias === 'bullish';
-      ctx.fillStyle = isDemand ? 'rgba(22,217,156,0.09)' : 'rgba(255,84,112,0.09)';
+      ctx.fillStyle = isDemand ? 'rgba(29,184,134,0.09)' : 'rgba(229,83,107,0.09)';
       const y1 = y(z.priceHigh);
       const y2 = y(z.priceLow);
       ctx.fillRect(10, y1, plotW - 10, Math.max(2, y2 - y1));
@@ -134,7 +134,7 @@ export function CandleChart() {
     if (bos) {
       const bx = 10 + Math.max(4, candles.length - 26) * cw;
       const by = y((bos.priceHigh + bos.priceLow) / 2) - 14;
-      drawTag(ctx, bx, by, bos.kind === 'MSS' ? 'Breakout' : 'BOS', '#27d6f5');
+      drawTag(ctx, bx, by, bos.kind === 'MSS' ? 'Breakout' : 'BOS', '#3aa8e8');
     }
     const ob = [...(snapshot?.zones ?? [])].reverse().find((z) => z.kind === 'order-block');
     if (ob) {
@@ -186,7 +186,7 @@ export function CandleChart() {
             onClick={() => brain.setFocus(s)}
             className={cn(
               'px-3 py-1.5 rounded-lg text-[0.72rem] font-semibold transition-all flex items-center gap-1.5',
-              s === focus ? 'bg-[var(--accent-soft)] text-white border border-[rgba(39,214,245,0.4)]' : 'dim btn',
+              s === focus ? 'bg-[var(--accent-soft)] text-white border border-[rgba(58,168,232,0.4)]' : 'dim btn',
             )}
           >
             {instrument(s).display.replace(' Perpetual', '')}
