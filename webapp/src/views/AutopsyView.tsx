@@ -6,82 +6,11 @@ import {
 import { useStore } from '../state/store';
 import { Chip } from '../components/ui/Primitives';
 import { timeAgo, cn } from '../utils/cn';
-import type { PostMortem, StrategyGenome, TradeRecord, FlashReport } from '../engine/types';
+import type { PostMortem } from '../engine/types';
+import { proposalsFor, learningQueryFor, relatedTrades, testStatus } from '../utils/learning';
 
 const LOOP_STEPS = ['Generate Hypothesis', 'Backtest', 'Analyse Results', 'Improve Strategy', 'Validate & Promote'];
 
-interface Proposal {
-  condition: string;
-  baseline: string;
-  proposed: string;
-  testKeyword: string;
-}
-
-function proposalsFor(pm: PostMortem, baseline: StrategyGenome): Proposal[] {
-  const text = `${pm.mistake} ${pm.correction}`.toLowerCase();
-  const rows: Proposal[] = [];
-  if (text.includes('premium')) {
-    rows.push({
-      condition: 'Long entry location gate',
-      baseline: 'Donchian / Supertrend breakout hi kaafi tha',
-      proposed: 'ICT Premium zone ke andar longs veto — discount ya CHoCH zaroori',
-      testKeyword: 'donchian',
-    });
-  }
-  if (text.includes('sweep') || text.includes('fvg') || text.includes('mitigat')) {
-    rows.push({
-      condition: 'Post-sweep entry timing',
-      baseline: `FVG depth ${baseline.fvgDepth} candle, turant entry`,
-      proposed: `Sweep ke baad 1 structural candle wait + FVG depth ${baseline.fvgDepth + 1}`,
-      testKeyword: 'fvg',
-    });
-  }
-  if (text.includes('gamma') || text.includes('oi change') || text.includes('hedge')) {
-    rows.push({
-      condition: 'Option-short risk rule',
-      baseline: 'Koi hard OI hedge threshold nahi',
-      proposed: 'OI change > 6% pe far-OTM hedge; expiry pe 2.2× ATR trail',
-      testKeyword: 'supertrend',
-    });
-  }
-  if (text.includes('whale') || text.includes('iceberg') || text.includes('volume')) {
-    rows.push({
-      condition: 'Whale volume veto',
-      baseline: 'Volume pe koi gate nahi',
-      proposed: '20-candle avg volume ka 300% cross pe instant square-off',
-      testKeyword: 'donchian',
-    });
-  }
-  rows.push({
-    condition: 'Minimum expectancy gate',
-    baseline: 'Explicit R:R floor nahi tha',
-    proposed: '1:2 se kam nearest-liquidity expectancy wale setups reject',
-    testKeyword: 'ema',
-  });
-  return rows;
-}
-
-function learningQueryFor(pm: PostMortem): string {
-  const text = `${pm.mistake} ${pm.correction}`.toLowerCase();
-  if (text.includes('sweep') || text.includes('fvg')) return 'Test FVG depth 3 and Donchian period 24 on NIFTY';
-  if (text.includes('gamma') || text.includes('hedge')) return 'Test Supertrend multiplier 2.5 for BANKNIFTY';
-  if (text.includes('whale') || text.includes('volume')) return 'Test Donchian period 30 for BANKNIFTY';
-  return 'Test 21 EMA instead of 20 EMA';
-}
-
-function relatedTrades(pm: PostMortem, trades: TradeRecord[]): TradeRecord[] {
-  const token = pm.asset.split(' ')[0].toLowerCase().replace('usdt', '');
-  return trades
-    .filter((t) => {
-      const sym = t.symbol.toLowerCase();
-      return sym.includes(token) || (token.length >= 4 && sym.includes(token.slice(0, 4)));
-    })
-    .slice(0, 3);
-}
-
-function testStatus(keyword: string, reports: FlashReport[]): FlashReport | undefined {
-  return reports.find((r) => r.query.toLowerCase().includes(keyword));
-}
 
 export function AutopsyView() {
   const snapshot = useStore((s) => s.snapshot);

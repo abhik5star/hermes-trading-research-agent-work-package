@@ -80,7 +80,12 @@ export const useStore = create<UIState>((set) => ({
     document.documentElement.dataset.fontScale = f;
     set({ fontScale: f });
   },
-  toggleBell: (open) => set((s) => ({ bellOpen: open ?? !s.bellOpen })),
+  toggleBell: (open) => set((s) => {
+    const next = open ?? !s.bellOpen;
+    // The bell panel and the Miri panel share the same corner — only one can
+    // be open at a time so they never overlap.
+    return next ? { bellOpen: true, miriOpen: false } : { bellOpen: false };
+  }),
   setBeginnerMode: (v) => set({ beginnerMode: v }),
   setModeMenuOpen: (v) => set({ modeMenuOpen: v }),
   setTimeframe: (t) => set({ timeframe: t }),
@@ -110,7 +115,7 @@ export const useStore = create<UIState>((set) => ({
   setHypothesisQuery: (q) => set({ hypothesisQuery: q }),
   setAutopsyTab: (t) => set({ autopsyTab: t }),
   setSelectedPostMortemId: (id) => set({ selectedPostMortemId: id }),
-  setMiriOpen: (open) => set({ miriOpen: open }),
+  setMiriOpen: (open) => set((s) => (open ? { miriOpen: true, bellOpen: false } : { miriOpen: false })),
   setMiriMode: (m) => set({ miriMode: m }),
 }));
 

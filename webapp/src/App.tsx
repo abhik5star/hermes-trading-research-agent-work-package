@@ -13,7 +13,7 @@ import { RiskView } from './views/RiskView';
 import { SettingsView } from './views/SettingsView';
 import { ZenOverlay } from './components/ZenOverlay';
 import { RiskLockdownBanner } from './components/nav/RiskLockdownBanner';
-import { AssistantMascot } from './components/assistant/AssistantMascot';
+import { CornerDock } from './components/assistant/CornerDock';
 import { BrainCircuit } from 'lucide-react';
 
 /** Zen Guard interaction telemetry — erratic mouse + tab thrashing. */
@@ -73,8 +73,9 @@ export default function App() {
         <Sidebar />
       </div>
 
-      {/* Main column */}
-      <div className="flex-1 min-w-0 flex flex-col gap-3">
+      {/* Main column — extra bottom padding keeps the status bar clear of the
+          bottom-right corner dock (Miri avatar + notification bell). */}
+      <div className="flex-1 min-w-0 flex flex-col gap-3 pb-11">
         <MobileNav />
         <TickerBar />
 
@@ -104,7 +105,7 @@ export default function App() {
       {/* Global overlays — no auto-popping event toasts: every brain event
           lands in the Notification Bell (badge count) and on the Miri mascot's
           unread dot, so nothing interrupts the work on screen. */}
-      <AssistantMascot />
+      <CornerDock />
       <RiskLockdownBanner />
       <ZenOverlay />
     </div>

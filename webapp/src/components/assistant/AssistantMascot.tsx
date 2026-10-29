@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Send, Mic, MicOff, X, Keyboard, Radio } from 'lucide-react';
 import { useStore, brain } from '../../state/store';
 import { MOOD_META } from '../mascot/moods';
+import { BackendBrief } from './BackendBrief';
 import { cn } from '../../utils/cn';
 
 const DEMO_VOICE_LINES = [
@@ -109,7 +110,7 @@ export function AssistantMascot() {
   };
 
   return (
-    <div className="fixed bottom-5 right-5 z-[80] flex flex-col items-end gap-2">
+    <div className="flex flex-col items-end gap-2">
       <AnimatePresence>
         {open && (
           <motion.div
@@ -154,8 +155,11 @@ export function AssistantMascot() {
               </button>
             </header>
 
+            {/* Live backend briefing — what the engine actually did */}
+            <BackendBrief />
+
             {/* messages */}
-            <div className="flex-1 overflow-y-auto p-3 space-y-2 min-h-[180px]" style={{ background: 'var(--bg-1)' }}>
+            <div className="flex-1 overflow-y-auto px-3 pb-3 pt-2 space-y-2 min-h-[150px]" style={{ background: 'var(--bg-1)' }}>
               {messages.map((line) => (
                 <div key={line.id} className={cn('flex', line.from === 'user' ? 'justify-end' : 'justify-start')}>
                   <div
@@ -212,7 +216,7 @@ export function AssistantMascot() {
         )}
       </AnimatePresence>
 
-      {/* Parked corner mascot — click is the ONLY way to open the panel */}
+      {/* Parked corner mascot — small, click is the ONLY way to open the panel */}
       <motion.button
         onClick={() => setOpen(!open)}
         whileHover={{ scale: 1.05 }}
@@ -221,8 +225,8 @@ export function AssistantMascot() {
         title="Miri AI se baat karo"
       >
         <span
-          className="block w-14 h-14 rounded-2xl overflow-hidden border-2"
-          style={{ borderColor: mood.color, boxShadow: '0 6px 18px rgba(3,7,18,0.45)' }}
+          className="block w-10 h-10 rounded-xl overflow-hidden border"
+          style={{ borderColor: mood.color, boxShadow: '0 4px 12px rgba(3,7,18,0.4)' }}
         >
           <img src="/miri-assistant.jpg" alt="Miri AI mascot" className="w-full h-full object-cover" />
         </span>
@@ -233,14 +237,14 @@ export function AssistantMascot() {
             initial={{ scale: 0.5, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.5, opacity: 0 }}
-            className="absolute -top-1.5 -left-1.5 text-sm bg-[var(--panel-2)] rounded-full w-5 h-5 grid place-items-center border hairline"
+            className="absolute -top-1 -left-1 text-[0.55rem] leading-none bg-[var(--panel-2)] rounded-full w-4 h-4 grid place-items-center border hairline"
           >
             {mood.emojis[0]}
           </motion.span>
         </AnimatePresence>
 
         {!open && unread > 0 && (
-          <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[var(--red)] text-white text-[0.6rem] font-bold grid place-items-center border-2 border-[var(--bg-0)]">
+          <span className="absolute -top-1 -right-1 min-w-[15px] h-[15px] px-1 rounded-full bg-[var(--red)] text-white text-[0.52rem] font-bold grid place-items-center border-2 border-[var(--bg-0)]">
             {unread > 9 ? '9+' : unread}
           </span>
         )}

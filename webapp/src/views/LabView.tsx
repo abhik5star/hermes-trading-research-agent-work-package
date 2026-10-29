@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { useStore } from '../state/store';
 import { ProgressRing, Chip, Bar } from '../components/ui/Primitives';
 import type { StrategyGenome, StrategyPod } from '../engine/types';
+import { hypothesisQueryFor } from '../utils/learning';
 
 function statusColor(status: string): string {
   if (status.startsWith('Evolving') || status.startsWith('Cross')) return '#e0a52f';
@@ -23,10 +24,6 @@ function conditionRows(g: StrategyGenome) {
 }
 
 /** Build a natural-language hypothesis query the Flash Backtest can parse. */
-export function hypothesisQueryFor(g: StrategyGenome): string {
-  return `Test Donchian period ${g.donchianPeriod + 4}, ${g.emaFast + 1} EMA instead of ${g.emaFast} EMA and RSI threshold ${Math.max(25, g.rsiOversold - 2)} on NIFTY`;
-}
-
 export function LabView() {
   const pods = useStore((s) => s.snapshot?.pods ?? []);
   const matrix = useStore((s) => s.snapshot?.fitMatrix ?? []);

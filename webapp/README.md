@@ -23,12 +23,20 @@ and badges rather than dense decimal clusters.
   (volume, demand/supply zones, structural tags, crosshair, timeframes,
   Strategy-Lab handoff button), Watchlist tabs, and five insight cards
   (Strategy Lab, Hypothesis Engine, Learning Loop, Trade Autopsy, Risk Centre).
-- **Miri AI mascot (bottom-right, always parked in the corner)** — compact
-  floating animated avatar with a gentle bob, mood emoji badge and an unread
-  counter (`components/assistant/AssistantMascot.tsx`). It **never opens on its
-  own**: the panel appears only when the mascot is clicked, and offers a
-  Text/Voice mode switch (Web Speech API where available, clearly-labelled
-  simulated voice demo otherwise).
+- **Bottom-right corner dock** — two compact controls, nothing else:
+  - a **small Miri avatar** (40 px, gentle bob, mood emoji badge, unread
+    counter) — `components/assistant/AssistantMascot.tsx`. It **never opens on
+    its own**: the panel appears only on click and offers a Text/Voice switch
+    (Web Speech API where available, clearly-labelled simulated voice demo
+    otherwise). Inside, a **live backend briefing** reports what the engine
+    actually did — the last executed trade, the latest strategy check
+    (Flash Backtest GO/NO-GO verdict or the active genome) and the newest
+    post-mortem with the concrete rule modification it triggered
+    (`components/assistant/BackendBrief.tsx`, shared derivations in
+    `utils/learning.ts` + `utils/backendBrief.ts`).
+  - the **notification bell** — every brain event lands here (unread badge +
+    full "Neural Alert Stream" on click). The bell and the Miri panel are
+    mutually exclusive so they never overlap.
 - **Bottom status bar** — demo-feed / broker / paper-mode connection states
   plus a permanent "Simulated · Live trading disabled" pill.
 
@@ -148,10 +156,13 @@ src/
 │   ├── learningLog.ts      "Mistake → Correction → New Probability" post-mortems
 │   └── brain.ts            Orchestrator + event bus (single source of truth)
 ├── state/store.ts          Zustand store: view/flow state, chart focus history, Miri panel state
+├── utils/
+│   ├── learning.ts         Shared post-mortem → proposal derivation (Autopsy + Miri)
+│   └── backendBrief.ts     Live backend briefing for the Miri panel
 ├── components/
 │   ├── layout/             Sidebar (desktop) + MobileNav, TickerBar, StatusBar
 │   ├── home/               MarketOverview, QuickStats, CandleChart (canvas), Watchlist, BottomRow
-│   ├── assistant/          Corner Miri mascot + click-only text/voice panel
+│   ├── assistant/          Corner dock: small Miri avatar + click-only text/voice panel + backend brief
 │   ├── scanner/            InstrumentBrowser (category tabs, timeframe, open-chart)
 │   ├── backtest/           HypothesisCompare (baseline vs modified strategy)
 │   ├── mascot/moods.ts     Mood metadata shared by the Miri assistant

@@ -48,16 +48,16 @@ export function NotificationBell() {
     <>
       <button
         onClick={() => toggleBell()}
-        className="relative w-11 h-11 rounded-2xl card grid place-items-center transition-transform hover:scale-105"
-        title="Ambient notification center"
+        className="relative w-10 h-10 rounded-xl card grid place-items-center transition-transform hover:scale-105"
+        title="Saare brain notifications yahan"
       >
-        <Bell size={18} className={cn(ringing && 'bell-ring')} style={{ color: latest ? glow : undefined }} />
+        <Bell size={15} className={cn(ringing && 'bell-ring')} style={{ color: latest ? glow : undefined }} />
         {unread > 0 && (
           <span
-            className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full text-[0.62rem] font-bold grid place-items-center text-white"
+            className="absolute -top-1 -right-1 min-w-[15px] h-[15px] px-1 rounded-full text-[0.52rem] font-bold grid place-items-center text-white"
             style={{ background: glow }}
           >
-            {unread}
+            {unread > 9 ? '9+' : unread}
           </span>
         )}
       </button>
@@ -67,22 +67,24 @@ export function NotificationBell() {
           <>
             <div className="fixed inset-0 z-40" onClick={() => toggleBell(false)} />
             <motion.aside
-              initial={{ opacity: 0, x: 28, scale: 0.97 }}
-              animate={{ opacity: 1, x: 0, scale: 1 }}
-              exit={{ opacity: 0, x: 28, scale: 0.97 }}
+              initial={{ opacity: 0, y: 28, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 28, scale: 0.97 }}
               transition={{ type: 'spring', stiffness: 300, damping: 28 }}
-              className="fixed right-4 top-20 z-50 w-[380px] max-w-[92vw] glass-strong rounded-3xl overflow-hidden"
+              className="fixed bottom-16 right-4 z-[85] w-[380px] max-w-[92vw] glass-strong rounded-3xl overflow-hidden"
             >
               <header className="flex items-center justify-between px-5 py-4 border-b hairline">
                 <div>
                   <h3 className="font-semibold">Neural Alert Stream</h3>
-                  <p className="text-xs dim">Ambient telemetry from every engine</p>
+                  <p className="text-xs dim">
+                    {alerts.length} events · {unread} unread
+                  </p>
                 </div>
                 <button className="btn-ghost w-8 h-8 grid place-items-center rounded-xl" onClick={() => toggleBell(false)}>
                   <X size={15} />
                 </button>
               </header>
-              <div className="max-h-[62vh] overflow-y-auto p-3 space-y-2">
+              <div className="max-h-[56vh] overflow-y-auto p-3 space-y-2">
                 {alerts.length === 0 && <p className="text-sm dim text-center py-10">No alerts yet — engines are listening.</p>}
                 {alerts.map((a) => {
                   const Icon = TONE_ICON[a.tone];

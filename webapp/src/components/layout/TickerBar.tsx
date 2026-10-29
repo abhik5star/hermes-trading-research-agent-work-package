@@ -4,7 +4,6 @@ import { useStore, brain } from '../../state/store';
 import { FOCUS_SYMBOLS, instrument } from '../../engine/instruments';
 import { feed } from '../../engine/marketFeed';
 import { MorphNumber } from '../ui/Primitives';
-import { NotificationBell } from '../nav/NotificationBell';
 import type { AppMode } from '../../engine/types';
 import { cn } from '../../utils/cn';
 
@@ -128,7 +127,6 @@ export function TickerBar() {
         <ModeMenu />
         <FontButtons />
         <PanicButtonCompact />
-        <NotificationBell />
         <div className="flex items-center gap-2.5 card pl-1.5 pr-3.5 py-1.5">
           <div
             className="w-8 h-8 rounded-lg grid place-items-center text-[0.72rem] font-bold"

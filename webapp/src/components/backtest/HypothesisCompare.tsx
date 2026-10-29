@@ -4,7 +4,7 @@ import { useStore, brain } from '../../state/store';
 import { Chip } from '../ui/Primitives';
 import { cn } from '../../utils/cn';
 import type { StrategyGenome } from '../../engine/types';
-import { hypothesisQueryFor } from '../../views/LabView';
+import { hypothesisQueryFor } from '../../utils/learning';
 
 const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
 
