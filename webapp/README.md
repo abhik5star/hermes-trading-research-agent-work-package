@@ -35,10 +35,11 @@ and badges rather than dense decimal clusters.
     post-mortem with the concrete rule modification it triggered
     (`components/assistant/BackendBrief.tsx`, shared derivations in
     `utils/learning.ts` + `utils/backendBrief.ts`).
-- **Bottom status bar** — demo-feed / broker / paper-mode connection states.
-  The account chip in the top bar is labelled "Paper · Simulated" and the mode
-  menu shows "Live Monitor · Sim", so the prototype never claims to trade
-  live money.
+- **Bottom status bar** — removed. The top bar already carries the live state
+  (mode menu shows "Paper Trading" / "Live Monitor · Sim", the account chip
+  reads "Paper · Simulated", and the bell carries every brain event), so the
+  prototype never claims to trade live money. Broker/feed wiring state is
+  visible in Settings → Data Connections.
 
 ## Clickable user flows
 
@@ -160,7 +161,7 @@ src/
 │   ├── learning.ts         Shared post-mortem → proposal derivation (Autopsy + Miri)
 │   └── backendBrief.ts     Live backend briefing for the Miri panel
 ├── components/
-│   ├── layout/             Sidebar (desktop) + MobileNav, TickerBar, StatusBar
+│   ├── layout/             Sidebar (desktop) + MobileNav, TickerBar
 │   ├── home/               MarketOverview, QuickStats, CandleChart (canvas), Watchlist, BottomRow
 │   ├── assistant/          Corner dock: small Miri avatar + click-only text/voice panel + backend brief
 │   ├── scanner/            InstrumentBrowser (category tabs, timeframe, open-chart)

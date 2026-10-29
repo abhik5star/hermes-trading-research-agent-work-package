@@ -3,7 +3,6 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useStore, brain } from './state/store';
 import { Sidebar, MobileNav } from './components/layout/Sidebar';
 import { TickerBar } from './components/layout/TickerBar';
-import { StatusBar } from './components/layout/StatusBar';
 import { HomeView } from './views/HomeView';
 import { ScannerView } from './views/ScannerView';
 import { LabView } from './views/LabView';
@@ -73,9 +72,9 @@ export default function App() {
         <Sidebar />
       </div>
 
-      {/* Main column — extra bottom padding keeps the status bar clear of the
-          bottom-right corner dock (Miri avatar + notification bell). */}
-      <div className="flex-1 min-w-0 flex flex-col gap-3 pb-11">
+      {/* Main column — the bottom padding keeps the bottom-right corner dock
+          (small Miri avatar) clear of the content underneath it. */}
+      <div className="flex-1 min-w-0 flex flex-col gap-3 pb-10">
         <MobileNav />
         <TickerBar />
 
@@ -98,8 +97,6 @@ export default function App() {
             </motion.div>
           </AnimatePresence>
         </main>
-
-        <StatusBar />
       </div>
 
       {/* Global overlays — no auto-popping event toasts: every brain event
