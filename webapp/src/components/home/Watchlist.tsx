@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { Star, StarOff } from 'lucide-react';
 import { useStore } from '../../state/store';
-import { feed } from '../../engine/marketFeed';
+import { feed } from '../../engine/liveFeed';
 import { UNIVERSE, instrument } from '../../engine/instruments';
 import { MorphNumber } from '../ui/Primitives';
 import { cn } from '../../utils/cn';

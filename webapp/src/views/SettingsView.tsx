@@ -1,7 +1,21 @@
-import { Settings as SettingsIcon, Type, Plug, FlaskConical, Info, AArrowDown, AArrowUp, Type as TypeIcon } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Settings as SettingsIcon, Type, Plug, FlaskConical, Info, AArrowDown, AArrowUp, Type as TypeIcon, Radio } from 'lucide-react';
 import { useStore, type FontScale } from '../state/store';
 import { FOCUS_SYMBOLS, instrument } from '../engine/instruments';
+import { feed, type LiveSource } from '../engine/liveFeed';
+import type { FeedStatusReport } from '../engine/feedTypes';
 import { cn } from '../utils/cn';
+
+const LIVE_META: Record<LiveSource, { name: string; detail: string }> = {
+  binance: {
+    name: 'Binance Public WebSocket',
+    detail: 'wss://stream.binance.com — free, no API key · crypto spot & USD-M futures',
+  },
+  yahoo: {
+    name: 'Yahoo Finance (NSE indices & stocks)',
+    detail: 'query1.finance.yahoo.com chart API · free, no API key · ^NSEI, ^NSEBANK, *.NS',
+  },
+};
 
 export function SettingsView() {
   const fontScale = useStore((s) => s.fontScale);
@@ -54,17 +68,19 @@ export function SettingsView() {
         </div>
       </div>
 
+      <LiveConnectionsCard />
+
       <div className="card p-5">
         <h3 className="text-[0.88rem] font-bold flex items-center gap-2 mb-4"><Plug size={15} className="text-[var(--accent)]" /> Data Connections</h3>
         <div className="space-y-2.5">
-          <ConnectionRow name="Simulated Feed (Binance/yfinance parity)" status="Connected (demo)" ok detail={snapshot?.dataAdapter ?? ''} />
-          <ConnectionRow name="Binance WebSocket (live)" status="Not Connected" ok={false} detail="wss://stream.binance.com — API key required" />
-          <ConnectionRow name="yfinance / NSE Bridge (live)" status="Not Connected" ok={false} detail="Nifty, BankNifty, NSE stocks — bridge deployment required" />
-          <ConnectionRow name="Broker Order Routing (Kite/Dhan/Angel)" status="Not Connected" ok={false} detail="ExecutionEngine adapter plug-in point" />
+          <ConnectionRow name="Simulated Feed (local generator)" status="Connected" ok detail="Always available — per-symbol fallback when a live socket is unreachable" />
+          <ConnectionRow name="Broker Order Routing (Kite/Dhan/Angel)" status="Not Connected" ok={false} detail="ExecutionEngine adapter plug-in point — live trading stays OFF" />
         </div>
         <p className="text-[0.64rem] dim mt-3 leading-relaxed">
-          Research build mein sab data ek local simulated feed se aata hai jo real WebSocket structures (ticks, candles, order book, funding, OI)
-          ko mirror karta hai. Live ke liye sirf <span className="font-mono text-white/80">engine/marketFeed.ts</span> ka adapter replace karna hota hai — baaki code untouched rehta hai.
+          Live market data adapters public data hi padhte hain (candles, order book, ticker) — koi order endpoint, API key ya
+          broker credential nahi. Chart ka badge <span className="font-mono text-white/80">LIVE</span> tab dikhta hai jab koi symbol
+          sach me live socket se aa raha ho, warna <span className="font-mono text-white/80">SIM</span>. Socket band ho toh us symbol
+          par simulated stream seamlessly wapas aa jata hai.
         </p>
       </div>
 
@@ -90,10 +106,89 @@ export function SettingsView() {
       <div className="card p-5">
         <h3 className="text-[0.88rem] font-bold flex items-center gap-2 mb-2"><Info size={15} className="text-[var(--accent)]" /> About</h3>
         <p className="text-[0.7rem] dim leading-relaxed">
-          Hermes Neural — autonomous SMC/ICT research dashboard. Saare P&L, orders aur predictions locally simulated hain.
+          Hermes Neural — autonomous SMC/ICT research dashboard. Saare P&amp;L, orders aur predictions locally simulated hain.
           Real capital ke saath use karne se pehle live data adapter, broker compliance aur 2–3 mahine ka paper performance zaroori hai.
         </p>
       </div>
+    </div>
+  );
+}
+
+/** Live feed toggles with the adapter's real connection state. */
+function LiveConnectionsCard() {
+  const [reports, setReports] = useState<FeedStatusReport[]>(() => feed.statusReports());
+  const [binanceOn, setBinanceOn] = useState(() => feed.isSourceEnabled('binance'));
+  const [yahooOn, setYahooOn] = useState(() => feed.isSourceEnabled('yahoo'));
+
+  useEffect(() => {
+    const id = setInterval(() => setReports(feed.statusReports()), 2000);
+    return () => clearInterval(id);
+  }, []);
+
+  const toggle = (source: LiveSource, next: boolean) => {
+    feed.setSource(source, next);
+    if (source === 'binance') setBinanceOn(next);
+    else setYahooOn(next);
+    setReports(feed.statusReports());
+  };
+
+  const bySource = (name: string) => reports.find((r) => r.source.startsWith(name));
+
+  return (
+    <div className="card p-5">
+      <h3 className="text-[0.88rem] font-bold flex items-center gap-2 mb-1">
+        <Radio size={15} className="text-[var(--green)]" /> Live Market Data (free, no API key)
+      </h3>
+      <p className="text-[0.66rem] dim mb-4">
+        Public data only — Binance WebSocket aur Yahoo Finance. Koi broker connect nahi hota, live trading OFF hi rehta hai.
+      </p>
+
+      <div className="space-y-2.5">
+        {(['binance', 'yahoo'] as LiveSource[]).map((source) => {
+          const meta = LIVE_META[source];
+          const report = bySource(source === 'binance' ? 'binance' : 'yahoo');
+          const on = source === 'binance' ? binanceOn : yahooOn;
+          const status = report?.status ?? 'idle';
+          const live = status === 'live';
+          const errored = status === 'error';
+          const tone = live ? 'var(--green)' : errored ? 'var(--red)' : 'var(--text-dim)';
+          return (
+            <div key={source} className="flex items-center gap-3 rounded-xl p-3" style={{ background: 'rgba(255,255,255,0.035)' }}>
+              <span className={cn('w-2.5 h-2.5 rounded-full shrink-0', live ? 'bg-[var(--green)] pulse-dot' : errored ? 'bg-[var(--red)]' : 'bg-[var(--text-dim)]')} />
+              <div className="flex-1 min-w-0">
+                <p className="text-[0.76rem] font-semibold">{meta.name}</p>
+                <p className="text-[0.6rem] dim truncate">{report?.detail ?? meta.detail}</p>
+                {report && report.symbols.length > 0 && (
+                  <p className="text-[0.58rem] dim mt-0.5">
+                    {report.symbols.length} symbol(s) live · {report.symbols.slice(0, 4).join(', ')}
+                    {report.symbols.length > 4 ? '…' : ''}
+                  </p>
+                )}
+              </div>
+              <span className="chip !text-[0.6rem]" style={{ color: tone, borderColor: `${tone}55` }}>
+                {status === 'live' ? 'Live' : status === 'connecting' ? 'Connecting…' : status === 'error' ? 'Unavailable' : 'Off'}
+              </span>
+              <button
+                className={cn('toggle', on && 'on')}
+                onClick={() => toggle(source, !on)}
+                aria-label={`Toggle ${meta.name}`}
+                title={on ? 'Band karo' : 'Chalu karo'}
+              />
+            </div>
+          );
+        })}
+      </div>
+
+      <p className="text-[0.62rem] dim mt-3 leading-relaxed">
+        {reports.find((r) => r.source.startsWith('binance'))?.status === 'error' && (
+          <span className="text-[var(--amber)]">
+            Binance socket reachable nahi hua (network blocked?) — crypto symbols simulated stream pe hi chal rahe hain. App bilkul theek chalega.
+          </span>
+        )}
+        <span className="font-mono text-white/70">engine/feeds/binanceWs.ts</span> aur{' '}
+        <span className="font-mono text-white/70">engine/feeds/yahooFeed.ts</span> me adapters hain —{' '}
+        <span className="font-mono text-white/70">engine/liveFeed.ts</span> unhe composite feed me route karta hai.
+      </p>
     </div>
   );
 }

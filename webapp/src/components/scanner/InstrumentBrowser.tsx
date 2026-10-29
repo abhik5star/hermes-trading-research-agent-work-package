@@ -2,7 +2,7 @@ import { useMemo, useRef } from 'react';
 import { Bitcoin, LineChart, CandlestickChart, ArrowRight } from 'lucide-react';
 import { useStore } from '../../state/store';
 import { UNIVERSE, VEHICLE_LABEL } from '../../engine/instruments';
-import { feed } from '../../engine/marketFeed';
+import { feed } from '../../engine/liveFeed';
 import { MorphNumber, Chip } from '../ui/Primitives';
 import { cn } from '../../utils/cn';
 import type { ScannerCategory } from '../../state/store';

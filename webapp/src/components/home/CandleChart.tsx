@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { CandlestickChart, Crosshair, Maximize2, Settings2, TrendingUp, FlaskConical } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { CandlestickChart, Crosshair, Maximize2, Settings2, TrendingUp, FlaskConical, Radio } from 'lucide-react';
 import { useStore } from '../../state/store';
-import { feed } from '../../engine/marketFeed';
+import { feed } from '../../engine/liveFeed';
 import { instrument } from '../../engine/instruments';
 import type { Candle } from '../../engine/types';
 import { cn } from '../../utils/cn';
@@ -23,162 +23,240 @@ export function CandleChart() {
   const wrapRef = useRef<HTMLDivElement>(null);
   const [hover, setHover] = useState<{ x: number; y: number } | null>(null);
 
-  const candles: Candle[] = useMemo(
-    () => feed.getCandles(focus).slice(-VIEW),
-    // re-derive on every store commit (heartbeat-driven)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [focus, snapshot?.heartbeat],
-  );
+  // ── Lightweight live rendering ───────────────────────────────────────────
+  // Candles live in a ref and the canvas is redrawn through requestAnimationFrame.
+  // Streaming ticks therefore cost **zero** React re-renders — only the DOM
+  // text nodes of the OHLC strip are patched directly.
+  const candlesRef = useRef<Candle[]>([]);
+  const drawRef = useRef<() => void>(() => {});
+  const rafRef = useRef<number | null>(null);
+  const ohlcRef = useRef<Record<string, HTMLSpanElement | null>>({});
+
+  const schedule = useCallback(() => {
+    if (rafRef.current !== null) return;
+    rafRef.current = requestAnimationFrame(() => {
+      rafRef.current = null;
+      drawRef.current();
+    });
+  }, []);
+
+  // Load the focused symbol's series whenever the focus changes.
+  useEffect(() => {
+    candlesRef.current = feed.getCandles(focus).slice(-VIEW);
+    schedule();
+  }, [focus, timeframe, schedule]);
+
+  // Stream updates straight into the canvas.
+  useEffect(() => {
+    const offCandle = feed.on('candle', ({ symbol, candle, rolled }) => {
+      if (symbol !== focus) return;
+      const arr = candlesRef.current;
+      const last = arr[arr.length - 1];
+      if (!last || rolled || last.t !== candle.t) {
+        if (last && last.t === candle.t) arr[arr.length - 1] = candle;
+        else {
+          arr.push(candle);
+          if (arr.length > VIEW) arr.shift();
+        }
+      } else {
+        arr[arr.length - 1] = candle;
+      }
+      schedule();
+    });
+
+    const offTick = feed.on('tick', ({ symbol, price }) => {
+      if (symbol !== focus) return;
+      const arr = candlesRef.current;
+      const last = arr[arr.length - 1];
+      if (!last) return;
+      last.c = price;
+      if (price > last.h) last.h = price;
+      if (price < last.l) last.l = price;
+      schedule();
+    });
+
+    return () => {
+      offCandle();
+      offTick();
+    };
+  }, [focus, schedule]);
+
+  useEffect(() => () => {
+    if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     const wrap = wrapRef.current;
-    if (!canvas || !wrap || candles.length < 2) return;
+    if (!canvas || !wrap) return;
 
-    const dpr = window.devicePixelRatio || 1;
-    const W = wrap.clientWidth;
-    const H = wrap.clientHeight;
-    canvas.width = W * dpr;
-    canvas.height = H * dpr;
-    canvas.style.width = `${W}px`;
-    canvas.style.height = `${H}px`;
-    const ctx = canvas.getContext('2d')!;
-    ctx.scale(dpr, dpr);
-    ctx.clearRect(0, 0, W, H);
+    const draw = () => {
+      const candles = candlesRef.current;
+      if (candles.length < 2) return;
 
-    const padR = 64;
-    const padB = 18;
-    const volH = 58;
-    const plotH = H - volH - padB;
-    const plotW = W - padR - 10;
-    const lows = candles.map((c) => c.l);
-    const highs = candles.map((c) => c.h);
-    let min = Math.min(...lows);
-    let max = Math.max(...highs);
-    const pad = (max - min) * 0.08 || 1;
-    min -= pad;
-    max += pad;
-    const cw = plotW / candles.length;
-    const bodyW = Math.max(2, cw * 0.62);
-    const y = (p: number) => ((max - p) / (max - min)) * plotH + 6;
-    const maxVol = Math.max(...candles.map((c) => c.v));
+      const dpr = window.devicePixelRatio || 1;
+      const W = wrap.clientWidth;
+      const H = wrap.clientHeight;
+      if (canvas.width !== W * dpr || canvas.height !== H * dpr) {
+        canvas.width = W * dpr;
+        canvas.height = H * dpr;
+        canvas.style.width = `${W}px`;
+        canvas.style.height = `${H}px`;
+      }
+      const ctx = canvas.getContext('2d')!;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, W, H);
 
-    // grid + price axis
-    ctx.font = '10px ui-monospace, monospace';
-    ctx.textBaseline = 'middle';
-    for (let i = 0; i <= 5; i++) {
-      const p = min + ((max - min) / 5) * i;
-      const yy = y(p);
-      ctx.strokeStyle = 'rgba(120,150,210,0.10)';
-      ctx.lineWidth = 1;
+      const padR = 64;
+      const padB = 18;
+      const volH = 58;
+      const plotH = H - volH - padB;
+      const plotW = W - padR - 10;
+      let min = Math.min(...candles.map((c) => c.l));
+      let max = Math.max(...candles.map((c) => c.h));
+      const pad = (max - min) * 0.08 || 1;
+      min -= pad;
+      max += pad;
+      const cw = plotW / candles.length;
+      const bodyW = Math.max(2, cw * 0.62);
+      const y = (p: number) => ((max - p) / (max - min)) * plotH + 6;
+      const maxVol = Math.max(...candles.map((c) => c.v)) || 1;
+
+      // grid + price axis
+      ctx.font = '10px ui-monospace, monospace';
+      ctx.textBaseline = 'middle';
+      for (let i = 0; i <= 5; i++) {
+        const p = min + ((max - min) / 5) * i;
+        const yy = y(p);
+        ctx.strokeStyle = 'rgba(120,150,210,0.10)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(10, yy);
+        ctx.lineTo(plotW, yy);
+        ctx.stroke();
+        ctx.fillStyle = 'rgba(191,207,235,0.55)';
+        ctx.fillText(p.toFixed(p > 1000 ? 0 : 2), plotW + 6, yy);
+      }
+
+      // SMC/ICT demand & supply zones (kept subtle — normal dashboard look)
+      for (const z of snapshot?.zones ?? []) {
+        if (z.priceHigh < min || z.priceLow > max) continue;
+        const isDemand = z.bias === 'bullish';
+        ctx.fillStyle = isDemand ? 'rgba(29,184,134,0.09)' : 'rgba(229,83,107,0.09)';
+        const y1 = y(z.priceHigh);
+        const y2 = y(z.priceLow);
+        ctx.fillRect(10, y1, plotW - 10, Math.max(2, y2 - y1));
+      }
+
+      // candles + volume
+      candles.forEach((c, i) => {
+        const x = 10 + i * cw + cw / 2;
+        const up = c.c >= c.o;
+        const color = up ? '#16d99c' : '#ff5470';
+        ctx.strokeStyle = color;
+        ctx.fillStyle = color;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x, y(c.h));
+        ctx.lineTo(x, y(c.l));
+        ctx.stroke();
+        const yO = y(c.o);
+        const yC = y(c.c);
+        const top = Math.min(yO, yC);
+        const hgt = Math.max(1.5, Math.abs(yC - yO));
+        ctx.globalAlpha = up ? 0.95 : 0.9;
+        ctx.fillRect(x - bodyW / 2, top, bodyW, hgt);
+        ctx.globalAlpha = 0.5;
+        const vh = (c.v / maxVol) * (volH - 12);
+        ctx.fillRect(x - bodyW / 2, H - padB - vh, bodyW, vh);
+        ctx.globalAlpha = 1;
+      });
+
+      // last price line + tag
+      const last = candles[candles.length - 1];
+      const lastY = y(last.c);
+      ctx.strokeStyle = last.c >= last.o ? '#16d99c' : '#ff5470';
+      ctx.setLineDash([5, 4]);
       ctx.beginPath();
-      ctx.moveTo(10, yy);
-      ctx.lineTo(plotW, yy);
-      ctx.stroke();
-      ctx.fillStyle = 'rgba(191,207,235,0.55)';
-      ctx.fillText(p.toFixed(p > 1000 ? 0 : 2), plotW + 6, yy);
-    }
-
-    // SMC/ICT demand & supply zones (kept subtle — normal dashboard look)
-    for (const z of snapshot?.zones ?? []) {
-      if (z.priceHigh < min || z.priceLow > max) continue;
-      const isDemand = z.bias === 'bullish';
-      ctx.fillStyle = isDemand ? 'rgba(29,184,134,0.09)' : 'rgba(229,83,107,0.09)';
-      const y1 = y(z.priceHigh);
-      const y2 = y(z.priceLow);
-      ctx.fillRect(10, y1, plotW - 10, Math.max(2, y2 - y1));
-    }
-
-    // candles + volume
-    candles.forEach((c, i) => {
-      const x = 10 + i * cw + cw / 2;
-      const up = c.c >= c.o;
-      const color = up ? '#16d99c' : '#ff5470';
-      ctx.strokeStyle = color;
-      ctx.fillStyle = color;
-      // wick
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(x, y(c.h));
-      ctx.lineTo(x, y(c.l));
-      ctx.stroke();
-      // body
-      const yO = y(c.o);
-      const yC = y(c.c);
-      const top = Math.min(yO, yC);
-      const hgt = Math.max(1.5, Math.abs(yC - yO));
-      ctx.globalAlpha = up ? 0.95 : 0.9;
-      ctx.fillRect(x - bodyW / 2, top, bodyW, hgt);
-      ctx.globalAlpha = 1;
-      // volume
-      const vh = (c.v / maxVol) * (volH - 12);
-      ctx.globalAlpha = 0.5;
-      ctx.fillRect(x - bodyW / 2, H - padB - vh, bodyW, vh);
-      ctx.globalAlpha = 1;
-    });
-
-    // last price line + tag
-    const last = candles[candles.length - 1];
-    const lastY = y(last.c);
-    ctx.strokeStyle = last.c >= last.o ? '#16d99c' : '#ff5470';
-    ctx.setLineDash([5, 4]);
-    ctx.beginPath();
-    ctx.moveTo(10, lastY);
-    ctx.lineTo(plotW, lastY);
-    ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.fillStyle = last.c >= last.o ? '#16d99c' : '#ff5470';
-    ctx.fillRect(plotW + 2, lastY - 9, padR - 6, 18);
-    ctx.fillStyle = '#04101f';
-    ctx.font = 'bold 10px ui-monospace, monospace';
-    ctx.fillText(last.c.toFixed(last.c > 1000 ? 0 : 2), plotW + 6, lastY);
-
-    // simple structural annotations from the latest SMC events
-    const bos = [...(snapshot?.zones ?? [])].reverse().find((z) => z.kind === 'BOS' || z.kind === 'MSS');
-    if (bos) {
-      const bx = 10 + Math.max(4, candles.length - 26) * cw;
-      const by = y((bos.priceHigh + bos.priceLow) / 2) - 14;
-      drawTag(ctx, bx, by, bos.kind === 'MSS' ? 'Breakout' : 'BOS', '#3aa8e8');
-    }
-    const ob = [...(snapshot?.zones ?? [])].reverse().find((z) => z.kind === 'order-block');
-    if (ob) {
-      const rx = 10 + Math.max(4, candles.length - 12) * cw;
-      const ry = y((ob.priceHigh + ob.priceLow) / 2) + 16;
-      drawTag(ctx, rx, ry, ob.bias === 'bullish' ? 'Demand Zone' : 'Retest Hold', ob.bias === 'bullish' ? '#16d99c' : '#ffc24b');
-    }
-
-    // crosshair
-    if (hover && hover.x < plotW) {
-      ctx.strokeStyle = 'rgba(191,207,235,0.35)';
-      ctx.setLineDash([3, 3]);
-      ctx.beginPath();
-      ctx.moveTo(hover.x, 6);
-      ctx.lineTo(hover.x, H - padB);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(10, hover.y);
-      ctx.lineTo(plotW, hover.y);
+      ctx.moveTo(10, lastY);
+      ctx.lineTo(plotW, lastY);
       ctx.stroke();
       ctx.setLineDash([]);
-      const idx = Math.min(candles.length - 1, Math.max(0, Math.floor((hover.x - 10) / cw)));
-      const hc = candles[idx];
-      if (hc) {
-        ctx.fillStyle = 'rgba(10,19,46,0.92)';
-        ctx.fillRect(12, 8, 132, 34);
-        ctx.strokeStyle = 'rgba(120,150,210,0.3)';
-        ctx.strokeRect(12, 8, 132, 34);
-        ctx.fillStyle = '#c3d2ee';
-        ctx.font = '10px ui-monospace, monospace';
-        ctx.fillText(`O ${hc.o.toFixed(2)}  H ${hc.h.toFixed(2)}`, 18, 19);
-        ctx.fillText(`L ${hc.l.toFixed(2)}  C ${hc.c.toFixed(2)}`, 18, 33);
-      }
-    }
-  }, [candles, snapshot?.zones, hover]);
+      ctx.fillStyle = last.c >= last.o ? '#16d99c' : '#ff5470';
+      ctx.fillRect(plotW + 2, lastY - 9, padR - 6, 18);
+      ctx.fillStyle = '#04101f';
+      ctx.font = 'bold 10px ui-monospace, monospace';
+      ctx.fillText(last.c.toFixed(last.c > 1000 ? 0 : 2), plotW + 6, lastY);
 
-  const last = candles[candles.length - 1];
-  const prev = candles[candles.length - 2];
-  const change = last && prev ? last.c - prev.c : 0;
-  const changePct = prev ? (change / prev.c) * 100 : 0;
+      // simple structural annotations from the latest SMC events
+      const bos = [...(snapshot?.zones ?? [])].reverse().find((z) => z.kind === 'BOS' || z.kind === 'MSS');
+      if (bos) {
+        const bx = 10 + Math.max(4, candles.length - 26) * cw;
+        const by = y((bos.priceHigh + bos.priceLow) / 2) - 14;
+        drawTag(ctx, bx, by, bos.kind === 'MSS' ? 'Breakout' : 'BOS', '#3aa8e8');
+      }
+      const ob = [...(snapshot?.zones ?? [])].reverse().find((z) => z.kind === 'order-block');
+      if (ob) {
+        const rx = 10 + Math.max(4, candles.length - 12) * cw;
+        const ry = y((ob.priceHigh + ob.priceLow) / 2) + 16;
+        drawTag(ctx, rx, ry, ob.bias === 'bullish' ? 'Demand Zone' : 'Retest Hold', ob.bias === 'bullish' ? '#16d99c' : '#ffc24b');
+      }
+
+      // crosshair
+      if (hover && hover.x < plotW) {
+        ctx.strokeStyle = 'rgba(191,207,235,0.35)';
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath();
+        ctx.moveTo(hover.x, 6);
+        ctx.lineTo(hover.x, H - padB);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(10, hover.y);
+        ctx.lineTo(plotW, hover.y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        const idx = Math.min(candles.length - 1, Math.max(0, Math.floor((hover.x - 10) / cw)));
+        const hc = candles[idx];
+        if (hc) {
+          ctx.fillStyle = 'rgba(10,19,46,0.92)';
+          ctx.fillRect(12, 8, 132, 34);
+          ctx.strokeStyle = 'rgba(120,150,210,0.3)';
+          ctx.strokeRect(12, 8, 132, 34);
+          ctx.fillStyle = '#c3d2ee';
+          ctx.font = '10px ui-monospace, monospace';
+          ctx.fillText(`O ${hc.o.toFixed(2)}  H ${hc.h.toFixed(2)}`, 18, 19);
+          ctx.fillText(`L ${hc.l.toFixed(2)}  C ${hc.c.toFixed(2)}`, 18, 33);
+        }
+      }
+
+      // Patch the OHLC strip in place — no React render for a streaming tick.
+      const prev = candles[candles.length - 2];
+      const change = prev ? last.c - prev.c : 0;
+      const changePct = prev ? (change / prev.c) * 100 : 0;
+      const set = (key: string, text: string) => {
+        const node = ohlcRef.current[key];
+        if (node && node.textContent !== text) node.textContent = text;
+      };
+      set('o', last.o.toFixed(2));
+      set('h', last.h.toFixed(2));
+      set('l', last.l.toFixed(2));
+      set('c', last.c.toFixed(2));
+      set('chg', `${change >= 0 ? '+' : ''}${change.toFixed(2)} (${changePct.toFixed(2)}%)`);
+      set('vol', (last.v / 1000).toFixed(1) + 'K');
+      const chgNode = ohlcRef.current.chg;
+      if (chgNode) chgNode.style.color = change >= 0 ? 'var(--green)' : 'var(--red)';
+    };
+
+    drawRef.current = draw;
+    draw();
+
+    const onResize = () => draw();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [snapshot?.zones, hover]);
+
+  // Which source is serving this symbol — honest "live vs simulated" badge.
+  const source = useMemo(() => feed.sourceFor(focus), [focus, snapshot?.heartbeat]);
 
   return (
     <section className="card p-4 h-full flex flex-col">
@@ -205,6 +283,18 @@ export function CandleChart() {
           <CandlestickChart size={15} className="text-[var(--accent)]" />
           {instrument(focus).display}
           <span className="chip !py-0.5 !text-[0.62rem]">{timeframe} · {instrument(focus).exchange}</span>
+          <span
+            className="chip !py-0.5 !text-[0.58rem] font-bold flex items-center gap-1"
+            style={
+              source === 'simulated'
+                ? { color: 'var(--amber)', borderColor: 'rgba(224,165,47,0.4)' }
+                : { color: 'var(--green)', borderColor: 'rgba(29,184,134,0.45)' }
+            }
+            title={source === 'simulated' ? 'Simulated feed' : `Live ${source} market data`}
+          >
+            <Radio size={10} className={source === 'simulated' ? '' : 'breathe'} />
+            {source === 'simulated' ? 'SIM' : `LIVE · ${source === 'binance' ? 'BINANCE WS' : 'YAHOO'}`}
+          </span>
         </div>
         <div className="flex items-center gap-1 card p-0.5">
           {TIMEFRAMES.map((tf) => (
@@ -240,19 +330,15 @@ export function CandleChart() {
         </div>
       </div>
 
-      {/* OHLC strip */}
-      {last && !beginner && (
-        <div className="flex items-center gap-4 text-[0.68rem] font-mono mb-1 flex-wrap">
-          <span className="dim">O <b className="text-white/85">{last.o.toFixed(2)}</b></span>
-          <span className="dim">H <b className="text-[var(--green)]">{last.h.toFixed(2)}</b></span>
-          <span className="dim">L <b className="text-[var(--red)]">{last.l.toFixed(2)}</b></span>
-          <span className="dim">C <b className="text-white/85">{last.c.toFixed(2)}</b></span>
-          <span className={change >= 0 ? 'text-[var(--green)]' : 'text-[var(--red)]'}>
-            {change >= 0 ? '+' : ''}{change.toFixed(2)} ({changePct.toFixed(2)}%)
-          </span>
-          <span className="dim">Vol {(last.v / 1000).toFixed(1)}K</span>
-        </div>
-      )}
+      {/* OHLC strip — values patched in place, never re-rendered on a tick */}
+      <div className="flex items-center gap-4 text-[0.68rem] font-mono mb-1 flex-wrap">
+        <span className="dim">O <b className="text-white/85" ref={(n) => { ohlcRef.current.o = n; }}>—</b></span>
+        <span className="dim">H <b className="text-[var(--green)]" ref={(n) => { ohlcRef.current.h = n; }}>—</b></span>
+        <span className="dim">L <b className="text-[var(--red)]" ref={(n) => { ohlcRef.current.l = n; }}>—</b></span>
+        <span className="dim">C <b className="text-white/85" ref={(n) => { ohlcRef.current.c = n; }}>—</b></span>
+        <span ref={(n) => { ohlcRef.current.chg = n; }}>—</span>
+        <span className="dim">Vol <span ref={(n) => { ohlcRef.current.vol = n; }}>—</span></span>
+      </div>
 
       <div ref={wrapRef} className="flex-1 min-h-[320px] relative">
         <canvas
@@ -268,7 +354,7 @@ export function CandleChart() {
       <p className="text-[0.62rem] dim mt-1.5">
         {beginner
           ? 'Hare candle = price badhi, laal = giri. Boxed zones wahan hain jahan bade players active the.'
-          : 'Candles, volume profile, SMC order-block demand/supply zones and structural annotations rendered on local canvas.'}
+          : 'Live canvas rendering — candles, volume profile, SMC order-block demand/supply zones and structural annotations. Streaming ticks repaint the canvas without re-rendering React.'}
       </p>
     </section>
   );

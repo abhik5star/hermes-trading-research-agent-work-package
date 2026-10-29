@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Flame, Landmark, ShieldCheck, RefreshCw, Gauge as GaugeIcon, ArrowDownRight, ArrowUpRight } from 'lucide-react';
 import { useStore, brain } from '../../state/store';
-import { feed } from '../../engine/marketFeed';
+import { feed } from '../../engine/liveFeed';
 import { Panel, Chip, MorphNumber, Bar } from '../ui/Primitives';
 import { compactInr, cn } from '../../utils/cn';
 import { mulberry32, hashSeed } from '../../engine/rng';

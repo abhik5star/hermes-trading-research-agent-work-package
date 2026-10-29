@@ -22,7 +22,8 @@ and badges rather than dense decimal clusters.
   Indices / F&O Stocks), Market Overview (regime + AI Health ring + top
   opportunities), Quick Stats, a TradingView-style 2D candlestick canvas
   (volume, demand/supply zones, structural tags, crosshair, timeframes,
-  Strategy-Lab handoff button), Watchlist tabs, and five insight cards
+  Strategy-Lab handoff button, and an honest `LIVE · BINANCE WS` / `LIVE · YAHOO`
+  / `SIM` source badge), Watchlist tabs, and five insight cards
   (Strategy Lab, Hypothesis Engine, Learning Loop, Trade Autopsy, Risk Centre).
 - **Bottom-right corner dock** — one compact control:
   - a **small Miri avatar** (40 px, gentle bob, mood emoji badge, unread
@@ -137,7 +138,12 @@ never enables live trading.
 ```
 src/
 ├── engine/                 Framework-agnostic trading brain (no React imports)
-│   ├── marketFeed.ts       FeedAdapter interface + simulated Binance/yfinance parity feed
+│   ├── feedTypes.ts        FeedAdapter / TradingFeed contracts + status types
+│   ├── liveFeed.ts         CompositeFeed — routes symbols to live adapters, simulated fallback
+│   ├── feeds/
+│   │   ├── binanceWs.ts    Binance public WebSocket + REST history (free, no key)
+│   │   └── yahooFeed.ts    Yahoo Finance chart bridge for NSE (free, no key)
+│   ├── marketFeed.ts       Deterministic simulated Binance/yfinance-parity feed
 │   ├── instruments.ts      NSE indices/stocks, index options, 200+ crypto spot/perps/options
 │   ├── indicators.ts       Hidden suite: RSI, CCI, Donchian, Supertrend, Chandelier, CPR, Fib, EMA
 │   ├── smcEngine.ts        BOS, CHoCH, MSS, liquidity sweeps, FVG, Order Blocks, premium/discount
@@ -172,18 +178,58 @@ src/
 │   └── views/              Home, Scanner, Lab, Backtest, Autopsy, Risk, Settings
 ```
 
-## Going live with real data
+## Live market data (free, no API key)
 
-`SimulatedFeed` implements the same `FeedAdapter` surface (`getCandles`,
-`getPrice`, `getBook`, marks + tick/candle/whale/book events) as the production
-adapters. Swap the single `feed` instance in `engine/brain.ts`:
+The dashboard ships with **real public market-data adapters**. Both are free
+and need no signup:
 
-- **Binance** — `wss://stream.binance.com:9443/stream?streams=...` (`@kline_1m`,
-  `@depth`, `@markPrice` funding, open-interest streams).
-- **Indian markets** — a yfinance/bridge WebSocket for `^NSEI`, `^NSEBANK` and
-  NSE cash names, plus an option-chain/OI vendor for Greeks telemetry.
+| Source | Transport | Covers |
+| --- | --- | --- |
+| **Binance** | WebSocket `wss://stream.binance.com:9443/stream` (`@kline_1m`, `@ticker`, `@depth10`) + REST `/api/v3/klines` history; futures on `fstream`/`fapi` | crypto spot (`BTCUSDT`) and USD-M perps (`BTCUSDT_PERP`) |
+| **Yahoo Finance** | `query1.finance.yahoo.com/v8/finance/chart/{SYMBOL}?interval=1m&range=1d`, polled every 4 s (Yahoo publishes no free public WebSocket — set `VITE_YAHOO_WS_URL` to use your own relay socket instead) | NSE indices (`^NSEI`, `^NSEBANK`) and NSE cash names (`RELIANCE.NS`) |
 
-No component or engine module outside `marketFeed.ts` needs to change.
+Turn them on in **Settings → Live Market Data**. The chart header shows an
+honest badge: `LIVE · BINANCE WS` / `LIVE · YAHOO` when a symbol is really
+served by a live socket, and `SIM` otherwise.
+
+### How the fallback works
+
+`engine/liveFeed.ts` exposes one `CompositeFeed` that every module uses:
+
+```
+symbol ──▶ Binance/Yahoo adapter has data? ──yes──▶ live candles
+                    │
+                    no
+                    ▼
+            SimulatedFeed (local generator)
+```
+
+Fallback is **per symbol**, so a blocked socket, a dead endpoint or an
+unreachable exchange never breaks the app — that symbol quietly keeps running
+on the deterministic simulator while the rest go live. Adapters only read
+public market data: there is no order endpoint, no API key and no brokerage
+credential anywhere in the path, and live trading stays disabled.
+
+### Lightweight real-time chart
+
+`home/CandleChart.tsx` renders on a 2D canvas that is repainted through
+`requestAnimationFrame`. Streaming ticks mutate the candle buffer in a ref and
+patch the OHLC text nodes directly, so a live feed costs **zero React
+re-renders** per tick — only the canvas pixels change.
+
+---
+
+## Extending the feed layer
+
+`SimulatedFeed`, `BinanceWsFeed` and `YahooFeed` all implement the same
+`FeedAdapter` surface (`getCandles`, `getPrice`, `getBook`, marks +
+tick/candle/whale/book events, defined in `engine/feedTypes.ts`). To add a
+source, implement that interface and register it in `engine/liveFeed.ts` —
+no component or brain module needs to change.
+
+- **Binance** — `wss://stream.binance.com:9443/stream?streams=...`
+- **Indian options Greeks** — an option-chain/OI vendor would slot in as
+  another adapter for Greeks telemetry.
 
 ## Feature map (spec → implementation)
 

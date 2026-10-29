@@ -3,7 +3,8 @@ import type {
   GapForecast, GreekRow, LiquiditySweep, MascotMood, Position,
   PostMortem, Regime, StructuralZone, TradeRecord,
 } from './types';
-import { feed, SimulatedFeed } from './marketFeed';
+import { feed } from './liveFeed';
+import type { TradingFeed } from './feedTypes';
 import { FOCUS_SYMBOLS, UNIVERSE, instrument } from './instruments';
 import { SmcEngine, type SmcSnapshot } from './smcEngine';
 import { snapshotIndicators, type HiddenIndicatorSnapshot } from './indicators';
@@ -143,7 +144,7 @@ export class Brain extends Emitter<BrainEvents> {
   private lastPositionActivity = Date.now();
   private lastMood: MascotMood = 'idle';
 
-  constructor(private feedInstance: SimulatedFeed) {
+  constructor(private feedInstance: TradingFeed) {
     super();
     for (const s of FOCUS_SYMBOLS) this.smc.set(s, new SmcEngine());
     this.sandbox = new SandboxEngine(() => [this.hatchery.active, ...this.hatchery.pods.map((p) => p.genome).slice(0, 2)]);

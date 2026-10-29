@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ChevronDown, AArrowDown, AArrowUp, Type, ShieldAlert } from 'lucide-react';
 import { useStore, brain } from '../../state/store';
 import { FOCUS_SYMBOLS, instrument } from '../../engine/instruments';
-import { feed } from '../../engine/marketFeed';
+import { feed } from '../../engine/liveFeed';
 import { MorphNumber } from '../ui/Primitives';
 import { NotificationBell } from '../nav/NotificationBell';
 import type { AppMode } from '../../engine/types';

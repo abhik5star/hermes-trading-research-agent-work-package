@@ -1,4 +1,5 @@
 import type { BookLevel, Candle, Instrument, OrderBook, Tick } from './types';
+import type { FeedAdapter, FeedEvents } from './feedTypes';
 import { FOCUS_SYMBOLS, SANDBOX_SYMBOLS, instrument } from './instruments';
 import { Emitter } from './EventEmitter';
 import { clamp, gaussian, hashSeed, mulberry32, uid } from './rng';
@@ -10,22 +11,7 @@ import { clamp, gaussian, hashSeed, mulberry32, uid } from './rng';
 // Both implement the same FeedAdapter surface, so the brain never changes.
 // ───────────────────────────────────────────────────────────────────────────
 
-export interface FeedEvents {
-  tick: Tick;
-  candle: { symbol: string; candle: Candle; rolled: boolean };
-  whale: { symbol: string; side: 'bid' | 'ask'; magnitude: number; t: number };
-  book: { symbol: string; book: OrderBook };
-}
-
-export interface FeedAdapter {
-  readonly name: string;
-  getCandles(symbol: string): Candle[];
-  getPrice(symbol: string): number;
-  getBook(symbol: string): OrderBook;
-  getMark(symbol: string): number;
-  getAllMarks(): Record<string, number>;
-  destroy(): void;
-}
+export type { FeedAdapter, FeedEvents } from './feedTypes';
 
 const HISTORY = 240;
 const TICKS_PER_CANDLE = 8;
@@ -266,5 +252,6 @@ export class SimulatedFeed extends Emitter<FeedEvents> implements FeedAdapter {
   }
 }
 
-export const feed = new SimulatedFeed();
+// The app-wide singleton lives in `liveFeed.ts` (CompositeFeed), which routes
+// symbols to the Binance / Yahoo adapters and falls back to this simulator.
 void uid;
