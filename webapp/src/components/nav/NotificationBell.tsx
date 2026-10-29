@@ -67,11 +67,11 @@ export function NotificationBell() {
           <>
             <div className="fixed inset-0 z-40" onClick={() => toggleBell(false)} />
             <motion.aside
-              initial={{ opacity: 0, y: 28, scale: 0.97 }}
+              initial={{ opacity: 0, y: -20, scale: 0.97 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 28, scale: 0.97 }}
+              exit={{ opacity: 0, y: -20, scale: 0.97 }}
               transition={{ type: 'spring', stiffness: 300, damping: 28 }}
-              className="fixed bottom-16 right-4 z-[85] w-[380px] max-w-[92vw] glass-strong rounded-3xl overflow-hidden"
+              className="fixed top-20 right-4 z-[85] w-[380px] max-w-[92vw] glass-strong rounded-3xl overflow-hidden"
             >
               <header className="flex items-center justify-between px-5 py-4 border-b hairline">
                 <div>

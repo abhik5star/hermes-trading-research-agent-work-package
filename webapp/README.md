@@ -16,14 +16,15 @@ and badges rather than dense decimal clusters.
   Beginner Mode toggle (collapses to a horizontal strip on mobile).
 - **Top ticker** — live asset pills (BTC, ETH, NIFTY, BANKNIFTY, RELIANCE…),
   mode menu (Backtest / Paper / Live / Time Machine), font scaler, compact
-  Emergency Square-Off, notification bell, account chip.
+  Emergency Square-Off, the **notification bell** (every brain event, with an
+  unread badge and a full "Neural Alert Stream" on click), account chip.
 - **Home** — greeting strip, three Market Scanner entry cards (Crypto / Indian
   Indices / F&O Stocks), Market Overview (regime + AI Health ring + top
   opportunities), Quick Stats, a TradingView-style 2D candlestick canvas
   (volume, demand/supply zones, structural tags, crosshair, timeframes,
   Strategy-Lab handoff button), Watchlist tabs, and five insight cards
   (Strategy Lab, Hypothesis Engine, Learning Loop, Trade Autopsy, Risk Centre).
-- **Bottom-right corner dock** — two compact controls, nothing else:
+- **Bottom-right corner dock** — one compact control:
   - a **small Miri avatar** (40 px, gentle bob, mood emoji badge, unread
     counter) — `components/assistant/AssistantMascot.tsx`. It **never opens on
     its own**: the panel appears only on click and offers a Text/Voice switch
@@ -34,11 +35,10 @@ and badges rather than dense decimal clusters.
     post-mortem with the concrete rule modification it triggered
     (`components/assistant/BackendBrief.tsx`, shared derivations in
     `utils/learning.ts` + `utils/backendBrief.ts`).
-  - the **notification bell** — every brain event lands here (unread badge +
-    full "Neural Alert Stream" on click). The bell and the Miri panel are
-    mutually exclusive so they never overlap.
-- **Bottom status bar** — demo-feed / broker / paper-mode connection states
-  plus a permanent "Simulated · Live trading disabled" pill.
+- **Bottom status bar** — demo-feed / broker / paper-mode connection states.
+  The account chip in the top bar is labelled "Paper · Simulated" and the mode
+  menu shows "Live Monitor · Sim", so the prototype never claims to trade
+  live money.
 
 ## Clickable user flows
 
