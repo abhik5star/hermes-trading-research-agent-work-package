@@ -89,6 +89,10 @@ node --experimental-strip-types scripts/smoke.ts   # headless engine smoke test
   Double-click and it checks Node.js, installs **all** dependencies on first
   run (cached afterwards), starts the server, and opens
   `http://localhost:5173` in the browser automatically.
+- **`RESUME-PREVIEW.bat` (repo root)** — *repair* launcher for when the
+  dashboard will not come up (stale port, wiped `node_modules`, failed
+  type-check). It restores dependencies, type-checks, starts the server and
+  opens the browser.
 - **`webapp/setup-dashboard.bat`** — full install plus verification
   (`npm install` → type-check → production build) for a fresh PC or after
   pulling new code.
@@ -100,6 +104,24 @@ node --experimental-strip-types scripts/smoke.ts   # headless engine smoke test
 All `.bat` files use CRLF (pinned via `.gitattributes`) and pause on error so
 the window stays readable. The only prerequisite is Node.js 18+ from
 <https://nodejs.org>.
+
+### Resume / repair the preview (macOS, Linux, CI, agents)
+
+`scripts/resume_preview.sh` is the idempotent recovery path for the dev
+preview on port 5173 — useful when a sandbox wipe removes `node_modules` and
+kills Vite mid-session:
+
+```bash
+./scripts/resume_preview.sh             # foreground dev server (Ctrl+C to stop)
+./scripts/resume_preview.sh --detached  # background; survives the shell
+./scripts/resume_preview.sh --check     # health check only, never starts
+```
+
+It verifies Node 18+, reuses an already-healthy server instead of fighting
+for the port, restores missing dependencies, runs `tsc --noEmit`, starts Vite
+on `0.0.0.0:5173` and prints the live-preview URL. `SKIP_TYPECHECK=1` skips
+the type-check for faster restarts. The script never touches git state and
+never enables live trading.
 
 ## Architecture
 

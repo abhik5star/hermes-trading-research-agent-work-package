@@ -13,6 +13,12 @@ reports/
 vendor-manifest.json
 skills/vendor/
 
+# Node dependencies (webapp/ has its own .gitignore; this is the safety net
+# for anyone who runs npm install at the repository root).
+node_modules/
+webapp/.preview.log
+webapp/.preview.pid
+
 # Runtime /trade-ticket output (TICKET-010). Operator-managed; never committed.
 # Default location is HERMES_TRADE_TICKET_DIR=${HOME}/trading-research/tickets,
 # but the *.ticket.yaml suffix matches the bundle's suggested basename
