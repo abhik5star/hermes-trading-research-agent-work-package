@@ -1,9 +1,11 @@
-import { Dna, Boxes, CheckCircle2, XCircle, Loader2, Zap, ArrowLeft, Lightbulb, Check, Clock } from 'lucide-react';
+import { Dna, Boxes, CheckCircle2, XCircle, Loader2, Zap, ArrowLeft, Lightbulb, Check, Clock, Trophy } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useStore } from '../state/store';
 import { ProgressRing, Chip, Bar } from '../components/ui/Primitives';
 import type { StrategyGenome, StrategyPod } from '../engine/types';
 import { hypothesisQueryFor } from '../utils/learning';
+import { cn } from '../utils/cn';
+import { StrategyRegistryPanel } from '../components/lab/StrategyRegistry';
 
 function statusColor(status: string): string {
   if (status.startsWith('Evolving') || status.startsWith('Cross')) return '#e0a52f';
@@ -38,6 +40,9 @@ export function LabView() {
   const symbols = [...new Set(matrix.map((c) => c.symbol))].slice(0, 14);
   const nameFor = (id: string) => pods.find((p) => p.genome.id === id)?.genome.codename ?? id.slice(0, 10);
 
+  const tab = useStore((s) => s.labTab);
+  const setTab = useStore((s) => s.setLabTab);
+
   const selected: StrategyPod | undefined = pods.find((p) => p.genome.id === selectedPodId);
 
   const goHypothesis = (g: StrategyGenome) => {
@@ -45,6 +50,16 @@ export function LabView() {
     setBacktestTab('hypothesis');
     setView('backtest');
   };
+
+  // ── Strategy Registry — the one place where the best strategies live ────
+  if (tab === 'registry') {
+    return (
+      <div className="space-y-4">
+        <LabTabs tab={tab} setTab={setTab} registryCount={snapshot?.registry.length ?? 0} />
+        <StrategyRegistryPanel />
+      </div>
+    );
+  }
 
   // ── Detail mode — flow 3: inspect the setup and every condition ─────────
   if (selected && snapshot) {
@@ -157,6 +172,7 @@ export function LabView() {
   // ── Grid mode — all strategy pods ───────────────────────────────────────
   return (
     <div className="space-y-4">
+      <LabTabs tab={tab} setTab={setTab} registryCount={snapshot?.registry.length ?? 0} />
       <div>
         <h2 className="text-lg font-bold heading-accent flex items-center gap-2">
           <Dna size={18} className="text-[#8f7fe0]" /> AI Strategy Hatchery & Lab
@@ -270,6 +286,43 @@ export function LabView() {
       <div className="card p-4">
         <Chip tone="violet"><Dna size={11} /> Mutation loop background mein continuously chal raha hai — promotion hone par Miri khud broadcast karti hai. Sab metrics simulated cross-validation se aate hain, live trading disabled hai.</Chip>
       </div>
+    </div>
+  );
+}
+
+/** Lab sub-navigation — the hatchery pods and the strategy registry. */
+function LabTabs({
+  tab, setTab, registryCount,
+}: {
+  tab: 'lab' | 'registry';
+  setTab: (t: 'lab' | 'registry') => void;
+  registryCount: number;
+}) {
+  return (
+    <div className="flex items-center gap-1 card p-1 w-fit">
+      <button
+        onClick={() => setTab('lab')}
+        className={cn(
+          'px-3 py-1.5 rounded-lg text-[0.7rem] font-semibold flex items-center gap-1.5 transition-colors',
+          tab === 'lab' ? 'bg-[var(--accent-soft)] text-[var(--accent)]' : 'dim hover:text-white',
+        )}
+      >
+        <Dna size={13} /> Hatchery Lab
+      </button>
+      <button
+        onClick={() => setTab('registry')}
+        className={cn(
+          'px-3 py-1.5 rounded-lg text-[0.7rem] font-semibold flex items-center gap-1.5 transition-colors',
+          tab === 'registry' ? 'bg-[var(--accent-soft)] text-[var(--accent)]' : 'dim hover:text-white',
+        )}
+      >
+        <Trophy size={13} /> Strategy Registry
+        {registryCount > 0 && (
+          <span className="ml-1 min-w-[16px] h-[16px] px-1 rounded-full text-[0.55rem] font-bold grid place-items-center" style={{ background: 'var(--accent)', color: '#04101f' }}>
+            {registryCount}
+          </span>
+        )}
+      </button>
     </div>
   );
 }

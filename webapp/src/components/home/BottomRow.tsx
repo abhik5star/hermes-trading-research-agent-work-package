@@ -1,7 +1,6 @@
 import { motion } from 'framer-motion';
 import {
-  FlaskConical, Lightbulb, RefreshCw, Search, ShieldHalf, ChevronRight, Lock, Check,
-} from 'lucide-react';
+  FlaskConical, Lightbulb, RefreshCw, Search, ShieldHalf, ChevronRight, Lock, Check, Trophy } from 'lucide-react';
 import { useStore } from '../../state/store';
 import { Bar } from '../ui/Primitives';
 import { compactInr, cn } from '../../utils/cn';
@@ -69,6 +68,34 @@ export function StrategyLabCard({ onOpen }: { onOpen: () => void }) {
         ))}
       </div>
       <p className="text-[0.56rem] dim mt-2.5">Green badges sirf simulated cross-validation pass karne pe</p>
+    </CardShell>
+  );
+}
+
+export function StrategyRegistryCard({ onOpen }: { onOpen: () => void }) {
+  const registry = useStore((s) => s.snapshot?.registry ?? []);
+  const activeId = useStore((s) => s.snapshot?.registryActiveId ?? null);
+  const list = registry.slice(0, 4);
+  return (
+    <CardShell icon={Trophy} title="Strategy Registry" subtitle="Best validated strategies — ek jagah" accent="#ffc24b" onOpen={onOpen}>
+      {list.length === 0 ? (
+        <p className="text-[0.68rem] dim leading-relaxed">
+          Abhi khaali hai. Har trade ke baad autopsy auto-learn karke rule change banata hai; jo cross-validation me
+          baseline se jeete, wahi yahan store hota hai.
+        </p>
+      ) : (
+        <div className="space-y-2.5">
+          {list.map((e, i) => (
+            <div key={e.id} className="flex items-center gap-2">
+              <span className="text-[0.68rem] dim w-3 shrink-0">{i + 1}.</span>
+              <span className="text-[0.7rem] font-medium flex-1 truncate">{e.codename}</span>
+              {e.id === activeId && <span className="text-[0.55rem] font-bold px-1.5 py-0.5 rounded-md" style={{ color: 'var(--accent)', background: 'var(--accent-soft)' }}>ACTIVE</span>}
+              <Badge label={e.verdict === 'validated' ? `CV ${(e.metrics.cvFitness * 100).toFixed(0)}%` : e.verdict} />
+            </div>
+          ))}
+        </div>
+      )}
+      <p className="text-[0.56rem] dim mt-2.5">Validated = asli cross-validation pass · paper trade aur backtest dono me use kar sakte ho</p>
     </CardShell>
   );
 }

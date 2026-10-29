@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import {
   TrendingUp, TrendingDown, FlaskConical, BrainCircuit, ArrowRight,
-  Activity, ShieldAlert, Wrench,
+  Activity, ShieldAlert, Wrench, Trophy,
 } from 'lucide-react';
 import { useStore } from '../../state/store';
 import { timeAgo, cn } from '../../utils/cn';
@@ -59,11 +59,12 @@ export function BackendBrief() {
   const setBacktestTab = useStore((s) => s.setBacktestTab);
   const setAutopsyTab = useStore((s) => s.setAutopsyTab);
   const setSelectedPostMortemId = useStore((s) => s.setSelectedPostMortemId);
+  const setLabTab = useStore((s) => s.setLabTab);
 
   const brief = useMemo(() => deriveBrief(snapshot), [snapshot]);
   if (!snapshot || !brief) return null;
 
-  const { lastTrade, openPnl, report, genomeName, podStatus, postMortem, proposals, validated } = brief;
+  const { lastTrade, openPnl, report, genomeName, podStatus, postMortem, proposals, validated, bestStrategy, activeStrategy } = brief;
 
   return (
     <div className="space-y-1.5 px-3 pt-3">
@@ -151,7 +152,50 @@ export function BackendBrief() {
         )}
       </Row>
 
-      {/* 3 — mistake and the modification it triggered */}
+      {/* 3 — the best strategy the learning loop produced */}
+      <Row
+        icon={bestStrategy ? Trophy : Wrench}
+        label="Best stored strategy"
+        tone={bestStrategy ? 'var(--green)' : 'var(--text-dim)'}
+        onClick={
+          bestStrategy
+            ? () => {
+                setLabTab('registry');
+                setView('lab');
+              }
+            : undefined
+        }
+      >
+        {bestStrategy ? (
+          <>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-[0.68rem] font-semibold">{bestStrategy.codename}</span>
+              {activeStrategy?.id === bestStrategy.id && (
+                <span className="text-[0.55rem] font-bold px-1.5 py-0.5 rounded-md" style={{ color: 'var(--accent)', background: 'var(--accent-soft)' }}>
+                  PAPER TRADING ACTIVE
+                </span>
+              )}
+              <span className="text-[0.58rem] dim ml-auto">
+                CV {(bestStrategy.metrics.cvFitness * 100).toFixed(1)}%
+              </span>
+            </div>
+            <p className="text-[0.62rem] dim mt-0.5 leading-snug">
+              Fixes: {bestStrategy.origin}
+            </p>
+            {bestStrategy.changes.length > 0 && (
+              <p className="text-[0.6rem] dim mt-1 font-mono">
+                {bestStrategy.changes.map((c) => `${c.param} ${c.from}→${c.to}`).join(' · ')}
+              </p>
+            )}
+          </>
+        ) : (
+          <p className="text-[0.64rem] dim leading-snug">
+            Abhi koi validated strategy nahi — pehla autopsy auto-learn hote hi yahan aa jayega.
+          </p>
+        )}
+      </Row>
+
+      {/* 4 — mistake and the modification it triggered */}
       <Row
         icon={postMortem ? ShieldAlert : Wrench}
         label="Mistake → Modification"

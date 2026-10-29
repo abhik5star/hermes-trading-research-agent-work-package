@@ -92,3 +92,190 @@ export function relatedTrades(pm: PostMortem, trades: TradeRecord[]): TradeRecor
 export function testStatus(keyword: string, reports: FlashReport[]): FlashReport | undefined {
   return reports.find((r) => r.query.toLowerCase().includes(keyword));
 }
+
+/**
+ * Turns the proposed rule changes into an actual genome mutation.
+ *
+ * This is the "modify" half of the learning loop: the post-mortem proposes a
+ * rule, and the rule becomes concrete strategy parameters that can be
+ * backtested against the baseline.
+ */
+export function proposeGenome(baseline: StrategyGenome, proposals: Proposal[]): StrategyGenome {
+  const g: StrategyGenome = { ...baseline, id: `gen-learn-${baseline.id}-${proposals.length}` };
+  for (const p of proposals) {
+    switch (p.testKeyword) {
+      case 'donchian':
+        // Tighter breakout + stricter oversold filter → fewer false breakouts.
+        g.donchianPeriod = clampInt(g.donchianPeriod + 4, 10, 40);
+        g.rsiOversold = clampInt(g.rsiOversold - 2, 22, 45);
+        break;
+      case 'fvg':
+        // Wait one more structural candle before entering the imbalance.
+        g.fvgDepth = clampInt(g.fvgDepth + 1, 1, 4);
+        break;
+      case 'supertrend':
+        // Wider ATR trail for option shorts.
+        g.supertrendMult = clampNumber(g.supertrendMult + 0.5, 1.8, 4.5);
+        break;
+      case 'ema':
+        // Slightly faster EMA + slower trend filter → cleaner R:R floor.
+        g.emaFast = clampInt(g.emaFast + 1, 9, 34);
+        g.emaSlow = clampInt(g.emaSlow + 6, 40, 200);
+        break;
+      default:
+        break;
+    }
+  }
+  if (g.emaSlow <= g.emaFast + 8) g.emaSlow = g.emaFast + 10;
+  return g;
+}
+
+/** One concrete parameter change worth backtesting. */
+export interface GenomeCandidate {
+  genome: StrategyGenome;
+  /** Human readable description of the change, e.g. "Donchian 20 → 24". */
+  label: string;
+  proposal: Proposal;
+}
+
+/**
+ * Candidate mutations for a post-mortem.
+ *
+ * A post-mortem says *what* went wrong; the engine still has to find *how* to
+ * fix it. Every candidate here is a single, deterministic parameter change
+ * inside the rule family the proposal belongs to, and every one of them is
+ * backtested for real before anything is called an improvement.
+ */
+const FAMILY_DELTAS: Record<string, Array<{ param: keyof StrategyGenome; deltas: number[]; label: (g: StrategyGenome, v: number) => string }>> = {
+  donchian: [
+    { param: 'donchianPeriod', deltas: [2, 4, 6, 8], label: (g, v) => `Donchian ${g.donchianPeriod} → ${v}` },
+    { param: 'rsiOversold', deltas: [2, 4, 6, 8], label: (g, v) => `RSI oversold ${g.rsiOversold} → ${v}` },
+  ],
+  fvg: [
+    { param: 'fvgDepth', deltas: [1, 2], label: (g, v) => `FVG depth ${g.fvgDepth} → ${v}` },
+  ],
+  supertrend: [
+    { param: 'supertrendMult', deltas: [0.3, 0.5, 0.8], label: (g, v) => `Supertrend mult ${g.supertrendMult} → ${v}` },
+  ],
+  ema: [
+    { param: 'emaFast', deltas: [1, 2, 4, 6], label: (g, v) => `EMA fast ${g.emaFast} → ${v}` },
+    { param: 'emaSlow', deltas: [4, 8, 12], label: (g, v) => `EMA slow ${g.emaSlow} → ${v}` },
+  ],
+};
+
+const PARAM_BOUNDS: Record<string, [number, number]> = {
+  donchianPeriod: [10, 40],
+  rsiOversold: [22, 45],
+  rsiOverbought: [55, 82],
+  fvgDepth: [1, 4],
+  supertrendMult: [1.8, 4.5],
+  emaFast: [9, 34],
+  emaSlow: [40, 200],
+};
+
+/** Build every deterministic candidate mutation for the given proposals. */
+export function proposeCandidates(baseline: StrategyGenome, proposals: Proposal[]): GenomeCandidate[] {
+  const out: GenomeCandidate[] = [];
+  const seen = new Set<string>();
+
+  for (const proposal of proposals) {
+    const families = FAMILY_DELTAS[proposal.testKeyword] ?? [];
+    for (const family of families) {
+      for (const delta of family.deltas) {
+        const current = Number(baseline[family.param]);
+        const next = family.param === 'supertrendMult'
+          ? clampNumber(current + delta, PARAM_BOUNDS[family.param][0], PARAM_BOUNDS[family.param][1])
+          : clampInt(current + delta, PARAM_BOUNDS[family.param][0], PARAM_BOUNDS[family.param][1]);
+        if (next === current) continue;
+        const key = `${proposal.testKeyword}:${family.param}:${next}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const genome: StrategyGenome = { ...baseline, id: `gen-learn-${baseline.id}-${key}` };
+        genome[family.param] = next as never;
+        if (genome.emaSlow <= genome.emaFast + 8) genome.emaSlow = genome.emaFast + 10;
+        out.push({ genome, label: family.label(baseline, next), proposal });
+      }
+    }
+  }
+  return out;
+}
+
+/**
+ * A Flash Backtest query that mentions every proposal keyword, so the
+ * Learning Loop view can match the report back to each proposal.
+ */
+export function learningQueryForProposals(proposals: Proposal[], pm: PostMortem): string {
+  const keywords = [...new Set(proposals.map((p) => p.testKeyword))];
+  const parts: string[] = [];
+  for (const k of keywords) {
+    if (k === 'donchian') parts.push('Donchian period 24');
+    else if (k === 'fvg') parts.push('FVG depth 3');
+    else if (k === 'supertrend') parts.push('Supertrend multiplier 2.5');
+    else if (k === 'ema') parts.push('21 EMA instead of 20 EMA');
+  }
+  if (!parts.length) parts.push('21 EMA instead of 20 EMA');
+  const symbol = pm.asset.includes('BANKNIFTY') || pm.asset.includes('BANKNIFTY') ? 'BANKNIFTY' : 'NIFTY';
+  return `Test ${parts.join(' and ')} on ${symbol}`;
+}
+
+/**
+ * A query that belongs to exactly ONE proposal.
+ *
+ * Each proposal gets its own report, so a test for the FVG rule can never be
+ * mistaken for proof of the whale-volume rule — every keyword in the query
+ * maps to the proposal that was actually validated.
+ */
+export function queryForProposal(proposal: Proposal, pm: PostMortem): string {
+  const symbol = pm.asset.includes('BANKNIFTY') ? 'BANKNIFTY' : 'NIFTY';
+  switch (proposal.testKeyword) {
+    case 'donchian':
+      return `Test Donchian period 24 on ${symbol}`;
+    case 'fvg':
+      return `Test FVG depth 3 on ${symbol}`;
+    case 'supertrend':
+      return `Test Supertrend multiplier 2.5 for ${symbol}`;
+    case 'ema':
+      return `Test 21 EMA instead of 20 EMA on ${symbol}`;
+    default:
+      return `Test 21 EMA instead of 20 EMA on ${symbol}`;
+  }
+}
+
+function clampInt(v: number, lo: number, hi: number): number {
+  return Math.min(hi, Math.max(lo, Math.round(v)));
+}
+
+function clampNumber(v: number, lo: number, hi: number): number {
+  return Math.min(hi, Math.max(lo, v));
+}
+
+/**
+ * A Flash Backtest query that mirrors the exact parameter change that was
+ * validated, and always carries the proposal keyword so the Learning Loop can
+ * match the report back to the right proposal (and only that one).
+ */
+export function queryForVariant(
+  baseline: StrategyGenome,
+  variant: StrategyGenome,
+  proposal: Proposal,
+  pm: PostMortem,
+): string {
+  const symbol = pm.asset.includes('BANKNIFTY') ? 'BANKNIFTY' : 'NIFTY';
+  const parts: string[] = [];
+  if (variant.donchianPeriod !== baseline.donchianPeriod) parts.push(`Donchian period ${variant.donchianPeriod}`);
+  if (variant.rsiOversold !== baseline.rsiOversold) parts.push(`RSI threshold ${variant.rsiOversold}`);
+  if (variant.emaFast !== baseline.emaFast) parts.push(`${variant.emaFast} EMA instead of ${baseline.emaFast} EMA`);
+  if (variant.emaSlow !== baseline.emaSlow) parts.push(`EMA slow ${variant.emaSlow}`);
+  if (variant.supertrendMult !== baseline.supertrendMult) parts.push(`Supertrend multiplier ${variant.supertrendMult}`);
+  if (variant.fvgDepth !== baseline.fvgDepth) parts.push(`FVG depth ${variant.fvgDepth}`);
+
+  const joined = parts.join(' ').toLowerCase();
+  if (!joined.includes(proposal.testKeyword)) {
+    if (proposal.testKeyword === 'donchian') parts.push(`Donchian period ${variant.donchianPeriod}`);
+    else if (proposal.testKeyword === 'fvg') parts.push(`FVG depth ${variant.fvgDepth}`);
+    else if (proposal.testKeyword === 'supertrend') parts.push(`Supertrend multiplier ${variant.supertrendMult}`);
+    else if (proposal.testKeyword === 'ema') parts.push(`${variant.emaFast} EMA instead of ${baseline.emaFast} EMA`);
+  }
+  if (!parts.length) parts.push(`${variant.emaFast} EMA instead of ${baseline.emaFast} EMA`);
+  return `Test ${parts.join(' and ')} on ${symbol}`;
+}

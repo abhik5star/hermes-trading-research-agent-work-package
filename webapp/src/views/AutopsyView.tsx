@@ -1,13 +1,13 @@
 import { motion } from 'framer-motion';
 import {
   BookOpenText, TrendingUp, TrendingDown, Minus, BrainCircuit, RefreshCw,
-  Check, Lock, FlaskConical, FileSearch, ArrowRight,
+  Check, Lock, FlaskConical, FileSearch, ArrowRight, Trophy,
 } from 'lucide-react';
 import { useStore } from '../state/store';
 import { Chip } from '../components/ui/Primitives';
 import { timeAgo, cn } from '../utils/cn';
 import type { PostMortem } from '../engine/types';
-import { proposalsFor, learningQueryFor, relatedTrades, testStatus } from '../utils/learning';
+import { proposalsFor, learningQueryFor, queryForProposal, relatedTrades, testStatus, type Proposal } from '../utils/learning';
 
 const LOOP_STEPS = ['Generate Hypothesis', 'Backtest', 'Analyse Results', 'Improve Strategy', 'Validate & Promote'];
 
@@ -21,13 +21,16 @@ export function AutopsyView() {
   const setHypothesisQuery = useStore((s) => s.setHypothesisQuery);
   const setBacktestTab = useStore((s) => s.setBacktestTab);
   const setView = useStore((s) => s.setView);
+  const setLabTab = useStore((s) => s.setLabTab);
   if (!snapshot) return null;
 
   const selected = snapshot.postMortems.find((p) => p.id === selectedId) ?? snapshot.postMortems[0];
   const baseline = snapshot.activeGenome;
 
-  const goTest = (pm: PostMortem) => {
-    setHypothesisQuery(learningQueryFor(pm));
+  const goTest = (pm: PostMortem, proposal?: Proposal) => {
+    // Each proposal gets its own keyword-pure query, so one report can never
+    // be mistaken for proof of a different rule.
+    setHypothesisQuery(proposal ? queryForProposal(proposal, pm) : learningQueryFor(pm));
     setBacktestTab('flash');
     setView('backtest');
   };
@@ -253,17 +256,37 @@ export function AutopsyView() {
                         <p className="text-[0.68rem] text-white/85">{p.proposed}</p>
                       </div>
                     </div>
+                    {!tested && (
+                      <button
+                        onClick={() => goTest(selected, p)}
+                        className="btn mt-2.5 px-3 py-1.5 rounded-lg text-[0.64rem] font-semibold flex items-center gap-1.5 w-fit"
+                      >
+                        <FlaskConical size={12} /> Is rule ko test karo
+                      </button>
+                    )}
                   </div>
                 );
               })}
             </div>
 
-            <button
-              onClick={() => goTest(selected)}
-              className="btn btn-primary mt-4 px-5 py-2.5 rounded-lg text-[0.74rem] font-semibold flex items-center gap-2"
-            >
-              <FlaskConical size={14} /> In proposed changes ko Flash Backtest mein test karo
-            </button>
+            <div className="flex items-center gap-2.5 flex-wrap mt-4">
+              <button
+                onClick={() => goTest(selected)}
+                className="btn btn-primary px-5 py-2.5 rounded-lg text-[0.74rem] font-semibold flex items-center gap-2"
+              >
+                <FlaskConical size={14} /> In proposed changes ko Flash Backtest mein test karo
+              </button>
+              <button
+                onClick={() => {
+                  setLabTab('registry');
+                  setView('lab');
+                }}
+                className="btn px-4 py-2.5 rounded-lg text-[0.72rem] font-semibold flex items-center gap-2"
+                title="Jo strategies auto-learning ne validate ki, wo ek jagah stored hain"
+              >
+                <Trophy size={14} /> Strategy Registry kholo
+              </button>
+            </div>
           </section>
         </div>
       )}

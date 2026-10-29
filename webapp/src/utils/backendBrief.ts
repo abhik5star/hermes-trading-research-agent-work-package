@@ -1,4 +1,5 @@
-import type { PostMortem, StrategyGenome, TradeRecord, FlashReport } from '../engine/types';
+import type { PostMortem, TradeRecord, FlashReport } from '../engine/types';
+import type { RegistryEntry } from '../engine/strategyRegistry';
 import { proposalsFor, testStatus } from './learning';
 import type { BrainSnapshot } from '../engine/brain';
 
@@ -10,6 +11,10 @@ import type { BrainSnapshot } from '../engine/brain';
  */
 
 export interface Brief {
+  /** Best validated strategy from the registry (the auto-learning result). */
+  bestStrategy: RegistryEntry | null;
+  /** The registry entry paper trading is currently using. */
+  activeStrategy: RegistryEntry | null;
   lastTrade: TradeRecord | null;
   openPnl: number;
   report: FlashReport | undefined;
@@ -35,7 +40,17 @@ export function deriveBrief(snapshot: BrainSnapshot | null): Brief | null {
     ? testStatus(proposals[0].testKeyword, snapshot.flashReports)
     : undefined;
 
+  const ranked = [...snapshot.registry].sort((a, b) => {
+    const rank = (e: RegistryEntry) => (e.verdict === 'validated' ? 1 : 0);
+    if (rank(a) !== rank(b)) return rank(b) - rank(a);
+    return b.metrics.cvFitness - a.metrics.cvFitness;
+  });
+  const bestStrategy = ranked.find((e) => e.verdict === 'validated') ?? null;
+  const activeStrategy = snapshot.registry.find((e) => e.id === snapshot.registryActiveId) ?? null;
+
   return {
+    bestStrategy,
+    activeStrategy,
     lastTrade,
     openPnl,
     report,

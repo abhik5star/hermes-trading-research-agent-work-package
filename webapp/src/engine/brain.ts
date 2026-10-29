@@ -1,7 +1,7 @@
 import type {
   AppMode, BrainAlert, ChatLine, ConfluenceCell, DarkPoolZone, FitCell, FlashReport, FuturePath,
   GapForecast, GreekRow, LiquiditySweep, MascotMood, Position,
-  PostMortem, Regime, StructuralZone, TradeRecord,
+  PostMortem, Regime, StructuralZone, StrategyGenome, TradeRecord,
 } from './types';
 import { feed } from './liveFeed';
 import type { TradingFeed } from './feedTypes';
@@ -20,6 +20,8 @@ import { DarkLiquidityTracker } from './darkLiquidity';
 import { ZenGuard } from './zenGuard';
 import { ExecutionEngine } from './execution';
 import { seedPostMortems, postMortemFromTrade } from './learningLog';
+import { StrategyRegistry } from './strategyRegistry';
+import { evaluateLearning, metricsFromEvaluation, diffGenomes } from './autoLearning';
 import { executeFlashTest } from './flashBacktest';
 import { buildGapForecast } from './gapPredictor';
 import { Emitter } from './EventEmitter';
@@ -56,6 +58,8 @@ export interface BrainSnapshot {
   risk: RiskEngine['state'];
   pods: StrategyHatchery['pods'];
   activeGenome: StrategyHatchery['active'];
+  registry: StrategyRegistry['entries'];
+  registryActiveId: string | null;
   fitMatrix: FitCell[];
   topFits: FitCell[];
   sandbox: { total: number; open: number; pnl: number };
@@ -108,6 +112,10 @@ export class Brain extends Emitter<BrainEvents> {
   private dark = new DarkLiquidityTracker();
   risk = new RiskEngine();
   hatchery = new StrategyHatchery();
+  /** Single place where the best validated strategies are stored. */
+  registry = new StrategyRegistry();
+  private learningBusy = false;
+  private lastLearningAt = 0;
   sandbox: SandboxEngine;
   private regimeSwitch = new RegimeSwitcher();
   zen = new ZenGuard();
@@ -522,6 +530,9 @@ export class Brain extends Emitter<BrainEvents> {
     this.postMortems.unshift(pm);
     this.postMortems = this.postMortems.slice(0, 30);
 
+    // Auto-learning: the autopsy feeds straight back into the strategy lab.
+    this.scheduleAutoLearning(pm);
+
     if (record.outcome === 'win') {
       this.pushAlert('success', 'Target hit — position closed', `${p.symbol} ${p.side} · P&L ₹${Math.round(p.pnl).toLocaleString('en-IN')}`);
       this.say(`Target hit! ${p.symbol} position profit mein close ki — learning log mein naya probability score update ho gaya.`);
@@ -532,6 +543,115 @@ export class Brain extends Emitter<BrainEvents> {
     if (this.risk.state.locked) {
       this.pushAlert('danger', 'Daily drawdown lockdown', '2% equity loss breached — all autonomous operations locked for the session.');
     }
+  }
+
+  // ── Auto-learning: autopsy → modified strategy → registry ───────────────
+
+  /** Kick off the learning loop (rate limited, never overlapping). */
+  private scheduleAutoLearning(pm: PostMortem): void {
+    if (this.learningBusy) return;
+    const now = Date.now();
+    if (now - this.lastLearningAt < 12_000) return;
+    this.learningBusy = true;
+    this.lastLearningAt = now;
+    void this.runAutoLearning(pm);
+  }
+
+  /**
+   * Derive a rule change from the post-mortem, mutate the genome, cross-validate
+   * it against the baseline and — only if it genuinely wins — register it and
+   * hand it to paper trading.
+   */
+  private async runAutoLearning(pm: PostMortem): Promise<void> {
+    try {
+      const baseline = this.hatchery.active;
+      const evaluation = evaluateLearning(pm, baseline);
+      const metrics = metricsFromEvaluation(evaluation);
+
+      if (!evaluation.improved) {
+        // Honest outcome: the modification did not survive validation.
+        this.registry.register({
+          genome: evaluation.variant,
+          codename: `${baseline.codename}-FIX`,
+          source: 'autopsy-learning',
+          origin: pm.mistake,
+          changes: diffGenomes(baseline, evaluation.variant),
+          metrics,
+          verdict: 'rejected',
+          testQuery: evaluation.query,
+          postMortemId: pm.id,
+        });
+        this.pushAlert(
+          'warning',
+          'Auto-learn: modification rejected',
+          `${evaluation.reason} — baseline strategy safe rakha gaya.`,
+        );
+        this.requestCommit(true);
+        return;
+      }
+
+      // Real Flash Backtest evidence for the proposal keywords.
+      const report = await this.flashTest(evaluation.query);
+
+      const entry = this.registry.register({
+        genome: evaluation.variant,
+        codename: `${baseline.codename}-FIX`,
+        source: 'autopsy-learning',
+        origin: pm.mistake,
+        changes: diffGenomes(baseline, evaluation.variant),
+        metrics,
+        verdict: 'validated',
+        testQuery: evaluation.query,
+        report,
+        postMortemId: pm.id,
+      });
+
+      // Promote into the execution engine → paper trading uses it from now on.
+      this.hatchery.adopt(evaluation.variant, evaluation.variantFitness);
+      this.registry.setActive(entry.id);
+
+      this.pushAlert(
+        'success',
+        'Auto-learn: new best strategy registered',
+        `${entry.codename} · CV fitness ${(evaluation.variantFitness * 100).toFixed(1)}% (baseline ${(evaluation.baselineFitness * 100).toFixed(1)}%) · Flash ${report.recommendation}`,
+      );
+      this.say(
+        `Bhai, autopsy ne apna kaam kar diya! ${pm.mistake} — isse ek nayi strategy bani (${entry.codename}), cross-validation mein ${(evaluation.variantFitness * 100).toFixed(1)}% fitness nikli jo baseline se behtar hai. Strategy Registry mein store ho gayi aur paper trading ab isi pe chal rahi hai.`,
+      );
+      this.requestCommit(true);
+    } catch (err) {
+      this.pushAlert('warning', 'Auto-learn: run failed', (err as Error).message);
+    } finally {
+      this.learningBusy = false;
+    }
+  }
+
+  /** Make a registry strategy the one paper trading uses. */
+  activateStrategy(id: string): StrategyRegistry['entries'][number] | undefined {
+    const entry = this.registry.get(id);
+    if (!entry) return undefined;
+    if (entry.verdict !== 'validated') {
+      this.pushAlert('warning', 'Cannot activate', `${entry.codename} is not validated yet — only a real test can promote it.`);
+      return undefined;
+    }
+    this.registry.setActive(id);
+    this.hatchery.adopt(entry.genome, entry.metrics.cvFitness);
+    this.pushAlert('success', 'Strategy activated for paper trading', `${entry.codename} · CV fitness ${(entry.metrics.cvFitness * 100).toFixed(1)}%`);
+    this.say(`Paper trading ab ${entry.codename} chalayegi — Strategy Registry se activate kar diya.`);
+    this.requestCommit(true);
+    return entry;
+  }
+
+  /** Run a real Flash Backtest for a stored strategy. */
+  async backtestStrategy(id: string): Promise<FlashReport | undefined> {
+    const entry = this.registry.get(id);
+    if (!entry) return undefined;
+    const query = entry.testQuery ?? this.queryForGenome(entry.genome);
+    return this.flashTest(query);
+  }
+
+  private queryForGenome(g: StrategyGenome): string {
+    return `Test Donchian period ${g.donchianPeriod}, ${g.emaFast} EMA instead of ${g.emaFast - 1} EMA and RSI threshold ${g.rsiOversold} on NIFTY`;
   }
 
   /** Proactive mascot broadcast when the sandbox locks a perfect cross-asset fit. */
@@ -779,6 +899,8 @@ export class Brain extends Emitter<BrainEvents> {
       risk: { ...this.risk.state },
       pods: this.hatchery.pods,
       activeGenome: this.hatchery.active,
+      registry: this.registry.list(),
+      registryActiveId: this.registry.activeId,
       fitMatrix: this.sandbox.matrix(),
       topFits: this.sandbox.topFits(8),
       sandbox: { total: this.sandbox.totalInstruments, open: this.sandbox.openPositions, pnl: this.sandbox.aggregatePnl },

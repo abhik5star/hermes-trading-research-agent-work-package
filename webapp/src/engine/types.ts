@@ -170,6 +170,8 @@ export type PodStatus =
   | 'Cross-Validating…'
   | 'Highly Profitable — Promoting to Active'
   | 'Failed Risk Test — Terminated & Discarded'
+  | 'Auto-Learned — Promoted to Active'
+  | 'Superseded — Replaced by Better Strategy'
   | 'Active in Execution Engine';
 
 export interface StrategyPod {

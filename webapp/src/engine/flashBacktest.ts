@@ -13,8 +13,9 @@ interface ParsedVariation {
 }
 
 const SYMBOL_ALIASES: Record<string, string> = {
-  nifty: '^NSEI',
+  // 'banknifty' must be checked first — it contains 'nifty'.
   banknifty: '^NSEBANK',
+  nifty: '^NSEI',
   btc: 'BTCUSDT_PERP',
   bitcoin: 'BTCUSDT_PERP',
   eth: 'ETHUSDT_PERP',
@@ -32,6 +33,11 @@ export function parseStrategyQuery(query: string): ParsedVariation {
   if (emaMatch) {
     genome.emaFast = Number(emaMatch[1]);
     notes.push(`EMA fast ${emaMatch[1]}${emaMatch[2] ? ` (was ${emaMatch[2]})` : ''}`);
+  }
+  const emaSlowMatch = q.match(/ema\s*slow\s*(?:of|period|instead\s+of)?\s*(\d{1,3})/);
+  if (emaSlowMatch) {
+    genome.emaSlow = Number(emaSlowMatch[1]);
+    notes.push(`EMA slow ${emaSlowMatch[1]}`);
   }
   const rsiMatch = q.match(/rsi\s*(?:threshold|level|of)?\s*(\d{1,3})/);
   if (rsiMatch) {

@@ -75,6 +75,26 @@ export class StrategyHatchery {
     return g;
   }
 
+  /**
+   * Adopt a genome that was validated elsewhere (the auto-learning loop
+   * produces these from post-mortems) and make it the active strategy.
+   */
+  adopt(genome: StrategyGenome, fitness: number): StrategyPod {
+    this.generation++;
+    this.active = { ...genome, generation: this.generation };
+    this.activeFitness = fitness;
+    const oldActive = this.pods.find((p) => p.promoted && p.status === 'Active in Execution Engine');
+    if (oldActive) {
+      oldActive.status = 'Superseded — Replaced by Better Strategy';
+      oldActive.terminated = true;
+      oldActive.promoted = false;
+    }
+    const newActive = this.toPod(this.active, 'Auto-Learned — Promoted to Active', undefined, true);
+    this.pods.unshift(newActive);
+    if (this.pods.length > 8) this.pods.length = 8;
+    return newActive;
+  }
+
   /** One GA generation tick. Returns a promotion event when one occurs. */
   evolve(): { promoted?: StrategyPod; terminated?: StrategyPod } {
     this.cycle++;

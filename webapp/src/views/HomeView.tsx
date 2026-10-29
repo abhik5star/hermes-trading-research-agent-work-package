@@ -6,7 +6,7 @@ import { QuickStats } from '../components/home/QuickStats';
 import { CandleChart } from '../components/home/CandleChart';
 import { Watchlist } from '../components/home/Watchlist';
 import {
-  StrategyLabCard, HypothesisCard, LearningLoopCard, TradeAutopsyCard, RiskCentreCard,
+  StrategyLabCard, StrategyRegistryCard, HypothesisCard, LearningLoopCard, TradeAutopsyCard, RiskCentreCard,
 } from '../components/home/BottomRow';
 
 const SCANNER_ENTRIES: { key: ScannerCategory; title: string; desc: string; icon: typeof Bitcoin }[] = [
@@ -94,6 +94,7 @@ export function HomeView() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
         <StrategyLabCard onOpen={() => { useStore.getState().setSelectedPodId(null); setView('lab'); }} />
+        <StrategyRegistryCard onOpen={() => { useStore.getState().setLabTab('registry'); setView('lab'); }} />
         <HypothesisCard onOpen={() => { setBacktestTab('hypothesis'); setView('backtest'); }} />
         <LearningLoopCard onOpen={() => { setAutopsyTab('learning'); setView('autopsy'); }} />
         <TradeAutopsyCard onOpen={() => { setAutopsyTab('postmortem'); setView('autopsy'); }} />

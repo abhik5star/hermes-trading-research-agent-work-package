@@ -15,6 +15,7 @@ export type FontScale = 'sm' | 'md' | 'lg';
 export type ScannerCategory = 'crypto' | 'indices' | 'fno';
 export type BacktestTab = 'hypothesis' | 'flash';
 export type AutopsyTab = 'postmortem' | 'learning';
+export type LabTab = 'lab' | 'registry';
 export type MiriMode = 'text' | 'voice';
 
 interface UIState {
@@ -34,6 +35,7 @@ interface UIState {
   hypothesisQuery: string;
   autopsyTab: AutopsyTab;
   selectedPostMortemId: string | null;
+  labTab: LabTab;
   miriOpen: boolean;
   miriMode: MiriMode;
   // ── Actions ───────────────────────────────────────────────────────────
@@ -52,8 +54,11 @@ interface UIState {
   setHypothesisQuery: (q: string) => void;
   setAutopsyTab: (t: AutopsyTab) => void;
   setSelectedPostMortemId: (id: string | null) => void;
+  setLabTab: (t: LabTab) => void;
   setMiriOpen: (open: boolean) => void;
   setMiriMode: (m: MiriMode) => void;
+  activateStrategy: (id: string) => void;
+  backtestStrategy: (id: string) => Promise<void>;
 }
 
 export const useStore = create<UIState>((set) => ({
@@ -72,6 +77,7 @@ export const useStore = create<UIState>((set) => ({
   hypothesisQuery: '',
   autopsyTab: 'postmortem',
   selectedPostMortemId: null,
+  labTab: 'lab',
   miriOpen: false,
   miriMode: 'text',
 
@@ -115,8 +121,13 @@ export const useStore = create<UIState>((set) => ({
   setHypothesisQuery: (q) => set({ hypothesisQuery: q }),
   setAutopsyTab: (t) => set({ autopsyTab: t }),
   setSelectedPostMortemId: (id) => set({ selectedPostMortemId: id }),
+  setLabTab: (t) => set({ labTab: t }),
   setMiriOpen: (open) => set((s) => (open ? { miriOpen: true, bellOpen: false } : { miriOpen: false })),
   setMiriMode: (m) => set({ miriMode: m }),
+  activateStrategy: (id) => brain.activateStrategy(id),
+  backtestStrategy: async (id) => {
+    await brain.backtestStrategy(id);
+  },
 }));
 
 brain.on('commit', (snapshot) => {

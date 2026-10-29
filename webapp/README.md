@@ -24,7 +24,8 @@ and badges rather than dense decimal clusters.
   (volume, demand/supply zones, structural tags, crosshair, timeframes,
   Strategy-Lab handoff button, and an honest `LIVE · BINANCE WS` / `LIVE · YAHOO`
   / `SIM` source badge), Watchlist tabs, and five insight cards
-  (Strategy Lab, Hypothesis Engine, Learning Loop, Trade Autopsy, Risk Centre).
+  (Strategy Lab, Strategy Registry, Hypothesis Engine, Learning Loop, Trade
+  Autopsy, Risk Centre).
 - **Bottom-right corner dock** — one compact control:
   - a **small Miri avatar** (40 px, gentle bob, mood emoji badge, unread
     counter) — `components/assistant/AssistantMascot.tsx`. It **never opens on
@@ -153,6 +154,8 @@ src/
 │   ├── greeks.ts           Black–Scholes pipeline + Gamma Blast radar
 │   ├── riskEngine.ts       Hard SL, Chandelier trail, 2% daily drawdown circuit breaker
 │   ├── hatchery.ts         Genetic AutoML strategy scientist (mutation → cross-validation → promotion)
+│   ├── strategyRegistry.ts The one place where validated strategies are stored
+│   ├── autoLearning.ts     Post-mortem → rule change → cross-validated mutation
 │   ├── sandbox.ts          Parallel paper trading over 300+ instruments + fit matrix
 │   ├── regime.ts           Sideways theta-harvest ↔ whale breakout escape engine
 │   ├── darkLiquidity.ts    Iceberg / dark-pool tracker (purple nebula)
@@ -170,6 +173,7 @@ src/
 │   ├── layout/             Sidebar (desktop) + MobileNav, TickerBar
 │   ├── home/               MarketOverview, QuickStats, CandleChart (canvas), Watchlist, BottomRow
 │   ├── assistant/          Corner dock: small Miri avatar + click-only text/voice panel + backend brief
+│   ├── lab/                StrategyRegistry panel (ranked best strategies)
 │   ├── scanner/            InstrumentBrowser (category tabs, timeframe, open-chart)
 │   ├── backtest/           HypothesisCompare (baseline vs modified strategy)
 │   ├── mascot/moods.ts     Mood metadata shared by the Miri assistant
@@ -218,6 +222,42 @@ patch the OHLC text nodes directly, so a live feed costs **zero React
 re-renders** per tick — only the canvas pixels change.
 
 ---
+
+## Auto-learning loop (autopsy → strategy → registry)
+
+The learning loop is **automatic** — no click required:
+
+```
+trade closes → post-mortem (mistake + correction)
+             → rule proposals derived from the post-mortem
+             → candidate mutations generated inside each rule family
+             → every candidate cross-validated on 3 uncorrelated instruments
+             → only a real winner is registered, promoted and used for paper trading
+```
+
+| Piece | Where |
+| --- | --- |
+| Post-mortem creation | `engine/learningLog.ts` → `engine/brain.ts` (`closePosition`) |
+| Proposal derivation (shared) | `utils/learning.ts` — `proposalsFor`, `proposeCandidates`, `queryForVariant` |
+| Mutation + validation | `engine/autoLearning.ts` — `evaluateLearning` (same CV protocol as the hatchery: best-two-of-three mean, worst-symbol floor, drawdown ceiling) |
+| Storage | `engine/strategyRegistry.ts` — one ranked list of every strategy that was ever validated |
+| Promotion to paper trading | `engine/hatchery.ts` → `adopt()` |
+| UI | Strategy Lab → **Strategy Registry** tab (`components/lab/StrategyRegistry.tsx`) |
+
+### The Strategy Registry — one place for the best strategies
+
+`Strategy Lab → Strategy Registry` is the single home of the best strategies.
+Each entry shows the mistake it fixes, the concrete parameter changes
+(`emaSlow 50 → 54`), the real cross-validation metrics and two actions:
+
+- **Paper trade** — makes it the strategy the execution engine uses.
+- **Backtest** — runs a Flash Backtest for that exact strategy.
+
+A green `VALIDATED` chip only ever appears for an entry whose metrics came
+from an actual cross-validation run; rejected modifications stay red with the
+reason, and untested ones stay amber. The same registry is surfaced on the
+Home screen and inside the Miri assistant briefing, so the best strategy is
+visible from every screen.
 
 ## Extending the feed layer
 
