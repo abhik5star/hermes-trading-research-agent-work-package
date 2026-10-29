@@ -208,16 +208,6 @@ body {
   animation: shimmer-text 3s linear infinite;
 }
 
-/* Toast entrance shake — restrained */
-@keyframes toast-shake {
-  0% { transform: translateX(0); }
-  25% { transform: translateX(-5px); }
-  50% { transform: translateX(4px); }
-  75% { transform: translateX(-2px); }
-  100% { transform: translateX(0); }
-}
-.toast-shake { animation: toast-shake 0.45s ease-out; }
-
 /* Assistant voice bars */
 @keyframes voice-bar {
   0%, 100% { transform: scaleY(0.35); }

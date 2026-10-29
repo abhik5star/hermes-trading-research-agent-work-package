@@ -13,7 +13,6 @@ import { RiskView } from './views/RiskView';
 import { SettingsView } from './views/SettingsView';
 import { ZenOverlay } from './components/ZenOverlay';
 import { RiskLockdownBanner } from './components/nav/RiskLockdownBanner';
-import { ToastStack } from './components/nav/ToastStack';
 import { AssistantMascot } from './components/assistant/AssistantMascot';
 import { BrainCircuit } from 'lucide-react';
 
@@ -102,8 +101,9 @@ export default function App() {
         <StatusBar />
       </div>
 
-      {/* Global overlays */}
-      <ToastStack />
+      {/* Global overlays — no auto-popping event toasts: every brain event
+          lands in the Notification Bell (badge count) and on the Miri mascot's
+          unread dot, so nothing interrupts the work on screen. */}
       <AssistantMascot />
       <RiskLockdownBanner />
       <ZenOverlay />

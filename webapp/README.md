@@ -67,7 +67,7 @@ and badges rather than dense decimal clusters.
 | Framework | React 18 + TypeScript + Vite |
 | Charts | Custom 2D HTML5 canvas candlestick renderer (no WebGL dependency) |
 | State | Zustand (brain → UI frame subscription) |
-| Motion | Framer Motion (subtle card/toast/tab transitions only) |
+| Motion | Framer Motion (subtle card/tab transitions only) |
 | Styling | Tailwind CSS with theme-token CSS variables |
 | Icons | lucide-react |
 
@@ -155,7 +155,7 @@ src/
 │   ├── scanner/            InstrumentBrowser (category tabs, timeframe, open-chart)
 │   ├── backtest/           HypothesisCompare (baseline vs modified strategy)
 │   ├── mascot/moods.ts     Mood metadata shared by the Miri assistant
-│   ├── nav/                Notification bell, toast stack, risk-lockdown banner
+│   ├── nav/                Notification bell (alert stream), risk-lockdown banner
 │   ├── panels/             Risk HUD, Greeks, positions, execution desk, vault…
 │   └── views/              Home, Scanner, Lab, Backtest, Autopsy, Risk, Settings
 ```
@@ -192,7 +192,7 @@ No component or engine module outside `marketFeed.ts` needs to change.
 > research/visualisation platform — autonomous routing to a live broker requires
 > a separately approved execution adapter and human decision gates.
 
-## Emotion engine & event popups
+## Emotion engine & event reporting
 
 The assistant mood state machine (`engine/brain.ts` → `updateMoodAndTheme`,
 metadata in `components/mascot/moods.ts`) drives the mood badge on the corner
@@ -211,6 +211,8 @@ mascot and the status pill inside the click-to-open panel:
 | `idle` 🛰️ | Default structural scanning |
 
 Every brain event (fills, stops, whales, gamma blasts, hedges, promotions,
-panic) raises a toast via `components/nav/ToastStack.tsx` — slides in from the
-right with a subtle spring shake, Hinglish quip per tone, lifetime progress
-bar, and auto-dismiss after 7s.
+panic) is recorded in the engine's alert buffer (last 40) and surfaces
+**without interrupting the screen**: the Notification Bell shows an unread
+count and opens a full stream on click, and the corner Miri mascot carries a
+red unread dot. There are deliberately **no auto-popping toast overlays** —
+brain events must never cover the chart or the panel you are reading.
