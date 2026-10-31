@@ -54,6 +54,11 @@ export class CompositeFeed extends Emitter<FeedEvents> {
     this.yahoo.on('candle', (e) => { this.live.add(e.symbol); this.emit('candle', e); });
     this.yahoo.on('tick', (e) => this.emit('tick', e));
     this.yahoo.on('book', (e) => this.emit('book', e));
+
+    // Live public market data is ON by default. Both sources are keyless and
+    // read-only; anything unreachable simply stays on the simulator.
+    this.setSource('binance', true);
+    this.setSource('yahoo', true);
   }
 
   start(): void {

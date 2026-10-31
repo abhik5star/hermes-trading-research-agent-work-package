@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Settings as SettingsIcon, Type, Plug, FlaskConical, Info, AArrowDown, AArrowUp, Type as TypeIcon, Radio } from 'lucide-react';
-import { useStore, type FontScale } from '../state/store';
+import { Settings as SettingsIcon, Type, Plug, FlaskConical, Info, AArrowDown, AArrowUp, Type as TypeIcon, Radio, Palette, Check } from 'lucide-react';
+import { useStore, THEME_OPTIONS, type FontScale } from '../state/store';
 import { FOCUS_SYMBOLS, instrument } from '../engine/instruments';
 import { feed, type LiveSource } from '../engine/liveFeed';
 import type { FeedStatusReport } from '../engine/feedTypes';
@@ -23,6 +23,8 @@ export function SettingsView() {
   const beginner = useStore((s) => s.beginnerMode);
   const setBeginner = useStore((s) => s.setBeginnerMode);
   const snapshot = useStore((s) => s.snapshot);
+  const themeToken = useStore((s) => s.themeToken);
+  const setThemeToken = useStore((s) => s.setThemeToken);
 
   const fontOptions: { key: FontScale; label: string; Icon: typeof TypeIcon }[] = [
     { key: 'sm', label: 'Chhota (Small)', Icon: AArrowDown },
@@ -65,6 +67,41 @@ export function SettingsView() {
             <p className="text-[0.68rem] dim mt-1">Simple view, easy Hinglish language — raw OHLC jargon chhup jata hai</p>
           </div>
           <button className={cn('toggle', beginner && 'on')} onClick={() => setBeginner(!beginner)} aria-label="Beginner mode" />
+        </div>
+      </div>
+
+      <div className="card p-5">
+        <h3 className="text-[0.88rem] font-bold flex items-center gap-2 mb-1">
+          <Palette size={15} className="text-[var(--accent)]" /> Dashboard Theme (manual)
+        </h3>
+        <p className="text-[0.66rem] dim mb-4">
+          Colour ab apni marzi se set hota hai — whale, gamma blast ya mood ke event pe dashboard ka colour
+          automatically change nahi hota.
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+          {THEME_OPTIONS.map((o) => {
+            const active = themeToken === o.token;
+            return (
+              <button
+                key={o.token}
+                onClick={() => setThemeToken(o.token)}
+                className={cn(
+                  'rounded-xl p-3 text-left transition-colors border',
+                  active ? 'border-[var(--accent)] bg-[var(--accent-soft)]' : 'border-white/5 hover:border-white/15',
+                )}
+                style={{ background: active ? undefined : 'rgba(255,255,255,0.03)' }}
+              >
+                <div className="flex items-center gap-1.5 mb-2">
+                  {o.swatch.map((c) => (
+                    <span key={c} className="w-4 h-4 rounded-md" style={{ background: c, border: '1px solid rgba(255,255,255,0.12)' }} />
+                  ))}
+                  {active && <Check size={13} className="ml-auto text-[var(--accent)]" />}
+                </div>
+                <p className="text-[0.74rem] font-semibold">{o.label}</p>
+                <p className="text-[0.6rem] dim mt-0.5 leading-snug">{o.blurb}</p>
+              </button>
+            );
+          })}
         </div>
       </div>
 

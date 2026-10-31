@@ -3,6 +3,7 @@ import type { FeedAdapter, FeedEvents } from './feedTypes';
 import { FOCUS_SYMBOLS, SANDBOX_SYMBOLS, instrument } from './instruments';
 import { Emitter } from './EventEmitter';
 import { clamp, gaussian, hashSeed, mulberry32, uid } from './rng';
+import { isNseOpen } from './marketSession';
 
 // ───────────────────────────────────────────────────────────────────────────
 // Feed abstraction. A real deployment swaps SimulatedFeed for:
@@ -148,8 +149,12 @@ export class SimulatedFeed extends Emitter<FeedEvents> implements FeedAdapter {
 
   private tick(): void {
     this.now += 1000;
+    // The Indian cash market is only open 09:15–15:30 IST on weekdays — while
+    // it is shut we must not invent candles for NIFTY/BANKNIFTY/NSE stocks.
+    const nseOpen = isNseOpen(new Date(this.now));
     for (const [symbol, s] of this.streams) {
       const { inst, rand } = s;
+      if (inst.exchange === 'NSE' && !nseOpen) continue;
       if (--s.driftLeft <= 0) {
         s.driftLeft = 12 + Math.floor(rand() * 20);
         const roll = rand();
@@ -212,7 +217,10 @@ export class SimulatedFeed extends Emitter<FeedEvents> implements FeedAdapter {
 
   private sandboxTick(): void {
     // Cheap scalar marks for the thousands of background paper-traded symbols.
+    const nseOpen = isNseOpen(new Date(this.now));
     for (const symbol of SANDBOX_SYMBOLS) {
+      // Indian names stay frozen while the exchange is closed.
+      if (!nseOpen && (symbol.endsWith('.NS') || symbol.startsWith('^') || symbol.startsWith('NSE-SB'))) continue;
       const r = mulberry32(hashSeed(symbol + Math.floor(this.now / 2000)));
       const prev = this.marks[symbol] ?? 100;
       const move = (r() - 0.5) * 0.012;

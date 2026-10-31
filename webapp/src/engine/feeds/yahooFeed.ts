@@ -2,6 +2,7 @@ import { Emitter } from '../EventEmitter';
 import { UNIVERSE } from '../instruments';
 import type { Candle, OrderBook } from '../types';
 import type { FeedEvents, FeedStatus, FeedStatusReport } from '../feedTypes';
+import { isNseOpen } from '../marketSession';
 
 /** Real NSE tickers Yahoo can actually quote. */
 const REAL_NSE_SYMBOLS = new Set(
@@ -34,7 +35,8 @@ const REAL_NSE_SYMBOLS = new Set(
 
 const CHART_API = 'https://query1.finance.yahoo.com/v8/finance/chart/';
 const HISTORY = 240;
-const POLL_MS = 4000;
+const POLL_MS = 8000;
+const POLL_MS_CLOSED = 60_000;
 const MAX_BACKOFF_MS = 60_000;
 
 interface YahooStream {
@@ -52,7 +54,7 @@ export class YahooFeed extends Emitter<FeedEvents> {
   private status: FeedStatus = 'idle';
   private detail = 'Not connected';
   private lastMessageAt: number | null = null;
-  private timer: ReturnType<typeof setInterval> | null = null;
+  private timer: ReturnType<typeof setTimeout> | null = null;
   private backoff = POLL_MS;
   private closed = false;
   private socket: WebSocket | null = null;
@@ -100,9 +102,14 @@ export class YahooFeed extends Emitter<FeedEvents> {
 
   private startPolling(): void {
     if (this.timer || this.closed) return;
-    this.timer = setInterval(() => {
+    const tick = () => {
+      if (this.closed) return;
       for (const symbol of this.streams.keys()) void this.poll(symbol);
-    }, POLL_MS);
+      // The exchange is shut → the series will not change, so poll gently.
+      const delay = isNseOpen() ? POLL_MS : POLL_MS_CLOSED;
+      this.timer = setTimeout(tick, delay);
+    };
+    this.timer = setTimeout(tick, POLL_MS);
   }
 
   private openRelay(): void {
@@ -263,7 +270,7 @@ export class YahooFeed extends Emitter<FeedEvents> {
 
   destroy(): void {
     this.closed = true;
-    if (this.timer) clearInterval(this.timer);
+    if (this.timer) clearTimeout(this.timer);
     this.timer = null;
     this.socket?.close();
     this.socket = null;

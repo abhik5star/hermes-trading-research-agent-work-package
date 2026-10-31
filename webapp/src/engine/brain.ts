@@ -22,6 +22,7 @@ import { ExecutionEngine } from './execution';
 import { seedPostMortems, postMortemFromTrade } from './learningLog';
 import { StrategyRegistry } from './strategyRegistry';
 import { evaluateLearning, metricsFromEvaluation, diffGenomes } from './autoLearning';
+import { nseSession, type MarketSession } from './marketSession';
 import { executeFlashTest } from './flashBacktest';
 import { buildGapForecast } from './gapPredictor';
 import { Emitter } from './EventEmitter';
@@ -60,6 +61,7 @@ export interface BrainSnapshot {
   activeGenome: StrategyHatchery['active'];
   registry: StrategyRegistry['entries'];
   registryActiveId: string | null;
+  session: MarketSession;
   fitMatrix: FitCell[];
   topFits: FitCell[];
   sandbox: { total: number; open: number; pnl: number };
@@ -157,7 +159,14 @@ export class Brain extends Emitter<BrainEvents> {
     for (const s of FOCUS_SYMBOLS) this.smc.set(s, new SmcEngine());
     this.sandbox = new SandboxEngine(() => [this.hatchery.active, ...this.hatchery.pods.map((p) => p.genome).slice(0, 2)]);
     this.attachFeed();
-    const bootSmc = this.smcFor(this.focusSymbol).update(this.feedInstance.getCandles(this.focusSymbol));
+    const bootCandles = this.feedInstance.getCandles(this.focusSymbol);
+    const bootSmc = this.smcFor(this.focusSymbol).update(bootCandles);
+    // Hidden confluence is computed up-front as well, so the heatmap is
+    // populated even when the exchange session is shut and no fresh candle
+    // ticks are arriving (the last close is still analysed).
+    const bootInd = snapshotIndicators(bootCandles);
+    this.indicators.set(this.focusSymbol, bootInd);
+    this.confluence.set(this.focusSymbol, computeConfluence(bootCandles, bootSmc, bootInd));
     this.gapForecast = buildGapForecast(bootSmc, this.feedInstance.getPrice(this.focusSymbol));
     this.refreshPaths(true);
     this.say('System boot complete. Neural SMC/ICT engine online — sab feeds live hain, calm ho ke dashboard dekho.');
@@ -165,6 +174,16 @@ export class Brain extends Emitter<BrainEvents> {
 
   private smcFor(symbol: string): SmcEngine {
     return this.smc.get(symbol)!;
+  }
+
+  /** Recompute the hidden-confluence heatmap for one symbol from live candles. */
+  private recomputeConfluence(symbol: string): void {
+    const candles = this.feedInstance.getCandles(symbol);
+    if (!candles.length || !this.smc.has(symbol)) return;
+    const smcSnap = this.smcFor(symbol).update(candles);
+    const ind = snapshotIndicators(candles);
+    this.indicators.set(symbol, ind);
+    this.confluence.set(symbol, computeConfluence(candles, smcSnap, ind));
   }
 
   private attachFeed(): void {
@@ -239,6 +258,7 @@ export class Brain extends Emitter<BrainEvents> {
     }
     this.focusSymbol = symbol;
     this.greeks = [];
+    this.recomputeConfluence(symbol);
     this.refreshPaths(true);
     this.say(`Focus switched to ${instrument(symbol).display} — SMC structure aur hidden confluence rescanning.`);
     this.requestCommit(true);
@@ -901,6 +921,7 @@ export class Brain extends Emitter<BrainEvents> {
       activeGenome: this.hatchery.active,
       registry: this.registry.list(),
       registryActiveId: this.registry.activeId,
+      session: nseSession(),
       fitMatrix: this.sandbox.matrix(),
       topFits: this.sandbox.topFits(8),
       sandbox: { total: this.sandbox.totalInstruments, open: this.sandbox.openPositions, pnl: this.sandbox.aggregatePnl },
@@ -937,4 +958,9 @@ export class Brain extends Emitter<BrainEvents> {
 
 export const brain = new Brain(feed);
 feed.start();
+// Live public market data (Binance WebSocket + Yahoo Finance) is ON by
+// default. Both are keyless and read-only; whenever a socket is unreachable
+// the composite feed keeps that symbol on the simulator instead of failing.
+feed.setSource('binance', true);
+feed.setSource('yahoo', true);
 setInterval(() => brain.tick(), 1000);

@@ -257,6 +257,9 @@ export function CandleChart() {
 
   // Which source is serving this symbol — honest "live vs simulated" badge.
   const source = useMemo(() => feed.sourceFor(focus), [focus, snapshot?.heartbeat]);
+  const session = snapshot?.session;
+  const exchange = instrument(focus).exchange;
+  const sessionOpen = exchange === 'BINANCE' || session?.state === 'open';
 
   return (
     <section className="card p-4 h-full flex flex-col">
@@ -295,6 +298,15 @@ export function CandleChart() {
             <Radio size={10} className={source === 'simulated' ? '' : 'breathe'} />
             {source === 'simulated' ? 'SIM' : `LIVE · ${source === 'binance' ? 'BINANCE WS' : 'YAHOO'}`}
           </span>
+          {exchange === 'NSE' && !sessionOpen && (
+            <span
+              className="chip !py-0.5 !text-[0.58rem] font-bold"
+              style={{ color: 'var(--amber)', borderColor: 'rgba(224,165,47,0.4)' }}
+              title={session?.label ?? 'Indian market is closed'}
+            >
+              MARKET CLOSED · {session?.state === 'weekend' ? 'WEEKEND' : 'LAST CLOSE'}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-1 card p-0.5">
           {TIMEFRAMES.map((tf) => (

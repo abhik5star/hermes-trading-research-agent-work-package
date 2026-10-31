@@ -190,11 +190,13 @@ and need no signup:
 | Source | Transport | Covers |
 | --- | --- | --- |
 | **Binance** | WebSocket `wss://stream.binance.com:9443/stream` (`@kline_1m`, `@ticker`, `@depth10`) + REST `/api/v3/klines` history; futures on `fstream`/`fapi` | crypto spot (`BTCUSDT`) and USD-M perps (`BTCUSDT_PERP`) |
-| **Yahoo Finance** | `query1.finance.yahoo.com/v8/finance/chart/{SYMBOL}?interval=1m&range=1d`, polled every 4 s (Yahoo publishes no free public WebSocket — set `VITE_YAHOO_WS_URL` to use your own relay socket instead) | NSE indices (`^NSEI`, `^NSEBANK`) and NSE cash names (`RELIANCE.NS`) |
+| **Yahoo Finance** | `query1.finance.yahoo.com/v8/finance/chart/{SYMBOL}?interval=1m&range=1d`, polled every 8 s while the NSE session is open and every 60 s while it is shut (Yahoo publishes no free public WebSocket — set `VITE_YAHOO_WS_URL` to use your own relay socket instead) | NSE indices (`^NSEI`, `^NSEBANK`) and NSE cash names (`RELIANCE.NS`) |
 
-Turn them on in **Settings → Live Market Data**. The chart header shows an
-honest badge: `LIVE · BINANCE WS` / `LIVE · YAHOO` when a symbol is really
-served by a live socket, and `SIM` otherwise.
+**Both sources are ON by default** — `CompositeFeed` enables Binance and Yahoo
+in its constructor, so real data starts with the app (no toggle hunt). You can
+still switch them off in **Settings → Live Market Data**. The chart header
+shows an honest badge: `LIVE · BINANCE WS` / `LIVE · YAHOO` when a symbol is
+really served by a live socket, and `SIM` otherwise.
 
 ### How the fallback works
 
@@ -213,6 +215,39 @@ unreachable exchange never breaks the app — that symbol quietly keeps running
 on the deterministic simulator while the rest go live. Adapters only read
 public market data: there is no order endpoint, no API key and no brokerage
 credential anywhere in the path, and live trading stays disabled.
+
+### Real exchange session clock (IST)
+
+`engine/marketSession.ts` is the single source of truth for "is the market
+open right now?". It works entirely in **IST (Asia/Kolkata)** and understands
+the real NSE/BSE rhythm:
+
+| State | When (IST) |
+| --- | --- |
+| `pre-open` | 09:00 – 09:14, Mon–Fri |
+| `open` | 09:15 – 15:30, Mon–Fri |
+| `closed` | 15:30 – 09:00, Mon–Fri |
+| `weekend` | Saturday / Sunday |
+
+When the session is shut, **Indian instruments stop moving**:
+
+- `SimulatedFeed` skips NSE candle ticks and NSE sandbox marks, so an index
+  price stays frozen at its last close instead of drifting on a weekend.
+- The Yahoo poller backs off from 8 s to 60 s.
+- The ticker pill dims the dot and shows a `CLOSED` chip; the chart header
+  shows `MARKET CLOSED · LAST CLOSE`.
+- Crypto keeps ticking — it is 24×7.
+
+The clock itself is visible in the top-right ticker bar: live IST `HH:MM:SS`,
+the date, and an `NSE OPEN / PRE-OPEN / CLOSED / WEEKEND` badge.
+
+### Manual dashboard theme
+
+The dashboard colour is a **manual setting** — nothing repaints the theme on
+its own any more. The brain still emits mood events for the assistant copy,
+but it no longer touches the DOM. Pick one of the seven themes in
+**Settings → Dashboard Theme**; the choice is stored in `localStorage`
+(`hermes-theme`) and applied to `document.documentElement.dataset.theme`.
 
 ### Lightweight real-time chart
 
