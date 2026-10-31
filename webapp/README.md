@@ -294,6 +294,37 @@ reason, and untested ones stay amber. The same registry is surfaced on the
 Home screen and inside the Miri assistant briefing, so the best strategy is
 visible from every screen.
 
+## Autonomous backend (the engine works on its own)
+
+The brain is not a readout — it runs its own loop, with or without a click:
+
+| Cadence | What runs |
+| --- | --- |
+| **every 1 s** | heartbeat, sandbox paper ledger, position management (stop / chandelier trail / targets), order fills, mood |
+| **every 5 s** | autonomous trade evaluation on the focused instrument |
+| **every 12 s** | **universe sweep** — scans 7 instruments (crypto perps, crypto spot, NSE index, NSE cash) for a high-confluence setup and opens a paper position |
+| **every 150 s** | **automatic strategy check** — a real Flash Backtest of the active genome, stored with the report |
+
+Rules the backend never bends:
+
+- Indian instruments are skipped while their exchange is shut — a paper trade
+  on a frozen series would be theatre, not a test.
+- A setup needs **60 % hidden confluence** *and* an SMC bias that agrees with
+  the trend alignment; anything less is reported, not traded.
+- The automatic check is a real backtest, but it is tagged `auto` and can
+  never count as the proof for a specific proposed rule — a proposal is only
+  `VERIFIED` when a report tested *that* rule (`proposalTestPhrase`).
+- Green badges are rendered only for results a real test produced; the
+  cadence check is labelled *single-symbol flash test* everywhere it appears.
+
+Everything the engine did on its own is surfaced in the Miri panel
+(`utils/backendBrief.ts` → `BackendBrief.tsx`): trades it opened, checks it
+ran, the last sweep (instruments swept, best confluence, whether a setup was
+taken), the mistake → modification pair and the registry entry a real test
+validated.
+
+---
+
 ## Extending the feed layer
 
 `SimulatedFeed`, `BinanceWsFeed` and `YahooFeed` all implement the same

@@ -89,8 +89,36 @@ export function relatedTrades(pm: PostMortem, trades: TradeRecord[]): TradeRecor
 }
 
 /** A Flash Backtest report that covers a given proposal keyword, if any. */
-export function testStatus(keyword: string, reports: FlashReport[]): FlashReport | undefined {
-  return reports.find((r) => r.query.toLowerCase().includes(keyword));
+/**
+ * The distinctive phrase that proves a proposal was really tested.
+ *
+ * The bare keyword is far too loose ("ema" matches almost every query), so
+ * the phrase carries the concrete parameter values of the proposed change.
+ */
+export function proposalTestPhrase(proposal: Proposal): string {
+  switch (proposal.testKeyword) {
+    case 'donchian':
+      return 'Donchian period 24';
+    case 'fvg':
+      return 'FVG depth 3';
+    case 'supertrend':
+      return 'Supertrend multiplier 2.5';
+    case 'ema':
+      return '21 EMA instead of 20 EMA';
+    default:
+      return proposal.testKeyword;
+  }
+}
+
+/**
+ * The report that actually tested `phrase` — exact phrase match, and the
+ * backend's automatic cadence checks are excluded so they can never be
+ * mistaken for the proof of a specific rule change.
+ */
+export function testStatus(phrase: string, reports: FlashReport[]): FlashReport | undefined {
+  const needle = phrase.trim().toLowerCase();
+  if (!needle) return undefined;
+  return reports.find((r) => !r.auto && r.query.toLowerCase().includes(needle));
 }
 
 /**

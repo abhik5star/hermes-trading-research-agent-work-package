@@ -22,7 +22,8 @@ import { ExecutionEngine } from './execution';
 import { seedPostMortems, postMortemFromTrade } from './learningLog';
 import { StrategyRegistry } from './strategyRegistry';
 import { evaluateLearning, metricsFromEvaluation, diffGenomes } from './autoLearning';
-import { nseSession, type MarketSession } from './marketSession';
+import { hypothesisQueryFor } from '../utils/learning';
+import { nseSession, isNseOpen, type MarketSession } from './marketSession';
 import { executeFlashTest } from './flashBacktest';
 import { buildGapForecast } from './gapPredictor';
 import { Emitter } from './EventEmitter';
@@ -82,6 +83,26 @@ export interface BrainSnapshot {
   lockdown: boolean;
   dataAdapter: string;
   heartbeat: number;
+  /** What the backend has actually been doing on its own. */
+  backend: {
+    /** Real strategy checks executed by the engine (not by a click). */
+    checksRun: number;
+    lastCheckAt: number | null;
+    /** Last autonomous universe sweep. */
+    lastScanAt: number | null;
+    /** Instruments the scanner sweeps. */
+    universe: string[];
+    /** Paper positions the engine opened by itself. */
+    tradesOpened: number;
+    /** Result of the last universe sweep. */
+    lastScan: {
+      at: number;
+      candidates: number;
+      best: { symbol: string; score: number } | null;
+      taken: string | null;
+      reason: string | null;
+    } | null;
+  };
 }
 
 interface BrainEvents {
@@ -153,10 +174,38 @@ export class Brain extends Emitter<BrainEvents> {
   private lastWhaleAt = 0;
   private lastPositionActivity = Date.now();
   private lastMood: MascotMood = 'idle';
+  /**
+   * Instruments the autonomous scanner sweeps for setups. Indian names are
+   * skipped while their exchange is shut — a paper trade on a frozen series
+   * would be theatre, not a test.
+   */
+  private scanUniverse: string[] = [
+    'BTCUSDT_PERP',
+    'ETHUSDT_PERP',
+    'SOLUSDT',
+    'ETHUSDT',
+    '^NSEI',
+    '^NSEBANK',
+    'RELIANCE.NS',
+  ];
+  private lastScanAt = 0;
+  private lastCheckAt: number | null = null;
+  /** What the last universe sweep found — shown verbatim in the Miri brief. */
+  private lastScan: {
+    at: number;
+    candidates: number;
+    best: { symbol: string; score: number } | null;
+    taken: string | null;
+    reason: string | null;
+  } | null = null;
+  private checksRun = 0;
+  private tradesOpened = 0;
+  private lastAutoVerdict: string | null = null;
 
   constructor(private feedInstance: TradingFeed) {
     super();
     for (const s of FOCUS_SYMBOLS) this.smc.set(s, new SmcEngine());
+    this.prepareScanUniverse();
     this.sandbox = new SandboxEngine(() => [this.hatchery.active, ...this.hatchery.pods.map((p) => p.genome).slice(0, 2)]);
     this.attachFeed();
     const bootCandles = this.feedInstance.getCandles(this.focusSymbol);
@@ -396,6 +445,7 @@ export class Brain extends Emitter<BrainEvents> {
       strategy: 'Gamma-Blast Momentum Buy',
     };
     this.positions.push(pos);
+    this.tradesOpened += 1;
     this.lastPositionActivity = Date.now();
     this.optionBasis.set(pos.id, { base: this.feedInstance.getPrice(this.focusSymbol), entry: premium, beta: 9 });
     this.execution.createOrder(symbol, 'BUY', pos.qty, premium, 'VWAP');
@@ -415,6 +465,16 @@ export class Brain extends Emitter<BrainEvents> {
     if (now - this.lastTradeEval > 5_000 && this.mode !== 'backtest') {
       this.lastTradeEval = now;
       this.evaluateAutonomousTrade();
+    }
+    // The backend keeps working on its own — a universe sweep and a real
+    // strategy check on a fixed cadence, independent of any click.
+    if (now - this.lastScanAt > 12_000 && this.mode !== 'backtest') {
+      this.lastScanAt = now;
+      this.scanForSetups();
+    }
+    if (now - (this.lastCheckAt ?? 0) > 150_000) {
+      this.lastCheckAt = Date.now();
+      void this.autoStrategyCheck();
     }
     this.requestCommit();
   }
@@ -441,7 +501,85 @@ export class Brain extends Emitter<BrainEvents> {
     }
   }
 
-  private openPosition(symbol: string, side: 'BUY' | 'SELL', price: number, confScore: number): void {
+  /** Boot streams + SMC engines for every symbol the scanner sweeps. */
+  private prepareScanUniverse(): void {
+    for (const symbol of this.scanUniverse) {
+      if (this.smc.has(symbol)) continue;
+      this.feedInstance.ensureStream(symbol);
+      this.smc.set(symbol, new SmcEngine());
+    }
+  }
+
+  /**
+   * Sweep the tradable universe for a high-confluence setup and take it in
+   * paper mode. Instruments whose exchange is shut are skipped — the price
+   * cannot move, so a position there would only fake activity.
+   */
+  private scanForSetups(): void {
+    const nseOpen = isNseOpen();
+    let best: { symbol: string; score: number } | null = null;
+    let taken: string | null = null;
+    let reason: string | null = null;
+
+    if (this.risk.state.locked || this.zen.isLocked()) reason = 'risk lock active';
+    else if (this.positions.length >= 3) reason = '3 positions already open';
+
+    if (!reason) {
+      for (const symbol of this.scanUniverse) {
+        if (this.positions.some((p) => p.symbol === symbol)) continue;
+        const inst = instrument(symbol);
+        // A shut exchange cannot move — scanning it would fake a setup.
+        if (inst.exchange === 'NSE' && !nseOpen) continue;
+        const conf = this.confluence.get(symbol);
+        if (!conf) continue;
+        if (!best || conf.score > best.score) best = { symbol, score: conf.score };
+        if (conf.score < 60) continue;
+        const ind = this.indicators.get(symbol);
+        if (!ind) continue;
+        const smcSnap = this.smcFor(symbol).update(this.feedInstance.getCandles(symbol));
+        const bullish = smcSnap.bias === 'bullish' && !smcSnap.inPremium && ind.trendAlignment > 0;
+        const bearish = smcSnap.bias === 'bearish' && !smcSnap.inDiscount && ind.trendAlignment < 0;
+        if (!bullish && !bearish) continue;
+        const price = this.feedInstance.getPrice(symbol);
+        this.openPosition(symbol, bullish ? 'BUY' : 'SELL', price, conf.score, 'Scanner');
+        taken = symbol;
+        break;
+      }
+    }
+
+    this.lastScan = { at: Date.now(), candidates: this.scanUniverse.length, best, taken, reason };
+  }
+
+  /**
+   * Run a genuine strategy check on the active genome on a fixed cadence.
+   * The report is a real backtest result — tagged `auto` so it can never be
+   * counted as the proof for a specific proposed rule change.
+   */
+  private async autoStrategyCheck(): Promise<void> {
+    const genome = this.hatchery.active;
+    const query = hypothesisQueryFor(genome);
+    try {
+      const report = executeFlashTest(query);
+      this.flashReports.unshift({ ...report, auto: true });
+      this.flashReports = this.flashReports.slice(0, 8);
+      this.checksRun += 1;
+      // Only speak up when the verdict actually flips — the bell must stay
+      // meaningful instead of ticking every few minutes.
+      if (report.recommendation !== this.lastAutoVerdict) {
+        this.lastAutoVerdict = report.recommendation;
+        this.pushAlert(
+          report.recommendation === 'GO' ? 'success' : 'warning',
+          `Auto strategy check — ${report.recommendation}`,
+          `${genome.codename} · single-symbol flash test · WR ${(report.winRate * 100).toFixed(1)}% · PF ${report.profitFactor.toFixed(2)} · ${report.trades} trades`,
+        );
+      }
+      this.requestCommit(true);
+    } catch (err) {
+      this.pushAlert('danger', 'Auto strategy check failed', (err as Error).message);
+    }
+  }
+
+  private openPosition(symbol: string, side: 'BUY' | 'SELL', price: number, confScore: number, via = 'Neural'): void {
     const inst = instrument(symbol);
     const riskBudget = this.risk.state.equity * 0.008;
     const stopDist = price * this.risk.state.hardStopPct;
@@ -461,10 +599,11 @@ export class Brain extends Emitter<BrainEvents> {
       strategy: this.hatchery.active.codename,
     };
     this.positions.push(pos);
+    this.tradesOpened += 1;
     this.lastPositionActivity = Date.now();
     this.neuralAction = side;
     this.execution.createOrder(symbol, side, qty, price, Math.random() > 0.5 ? 'TWAP' : 'VWAP');
-    this.pushAlert('success', `Neural ${side} executed — ${inst.display}`, `${qty} units via iceberg slices · confluence ${confScore}% · ${this.mode.toUpperCase()}`);
+    this.pushAlert('success', `${via} ${side} executed — ${inst.display}`, `${qty} units via iceberg slices · confluence ${confScore}% · ${this.mode.toUpperCase()}`);
     this.say(`Order execute ho gaya: ${side} ${inst.display}, confluence glow strong mila. Hard stop aur Chandelier trail dono armed hain.`);
   }
 
@@ -487,6 +626,7 @@ export class Brain extends Emitter<BrainEvents> {
       strategy: 'Theta-Harvest Straddle',
     };
     this.positions.push(pos);
+    this.tradesOpened += 1;
     this.lastPositionActivity = Date.now();
     this.optionBasis.set(pos.id, { base: this.feedInstance.getPrice(this.focusSymbol), entry: price, beta: 6 });
     this.say('Sideways regime confirm — delta-neutral Short Straddle activate, theta decay harvest shuru. Order Block boundaries pe strict monitoring hai.');
@@ -952,6 +1092,14 @@ export class Brain extends Emitter<BrainEvents> {
       lockdown: locked,
       dataAdapter: this.feedInstance.name,
       heartbeat: this.heartbeat,
+      backend: {
+        checksRun: this.checksRun,
+        lastCheckAt: this.lastCheckAt,
+        lastScanAt: this.lastScanAt || null,
+        universe: [...this.scanUniverse],
+        tradesOpened: this.tradesOpened,
+        lastScan: this.lastScan,
+      },
     };
   }
 }

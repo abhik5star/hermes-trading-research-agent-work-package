@@ -7,7 +7,7 @@ import { useStore } from '../state/store';
 import { Chip } from '../components/ui/Primitives';
 import { timeAgo, cn } from '../utils/cn';
 import type { PostMortem } from '../engine/types';
-import { proposalsFor, learningQueryFor, queryForProposal, relatedTrades, testStatus, type Proposal } from '../utils/learning';
+import { proposalsFor, learningQueryFor, queryForProposal, relatedTrades, testStatus, proposalTestPhrase, type Proposal } from '../utils/learning';
 
 const LOOP_STEPS = ['Generate Hypothesis', 'Backtest', 'Analyse Results', 'Improve Strategy', 'Validate & Promote'];
 
@@ -233,7 +233,7 @@ export function AutopsyView() {
 
             <div className="space-y-2.5">
               {proposalsFor(selected, baseline).map((p) => {
-                const tested = testStatus(p.testKeyword, snapshot.flashReports);
+                const tested = testStatus(proposalTestPhrase(p), snapshot.flashReports);
                 return (
                   <div key={p.condition} className="rounded-xl p-3.5" style={{ background: 'rgba(255,255,255,0.035)' }}>
                     <div className="flex items-center justify-between gap-3 flex-wrap">

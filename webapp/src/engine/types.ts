@@ -255,6 +255,9 @@ export interface FlashReport {
   expectancy: number;
   recommendation: 'GO' | 'NO-GO';
   at: number;
+  /** True for the backend's own periodic check — such a report is evidence
+   *  of a real test, but never the proof for a specific proposed rule. */
+  auto?: boolean;
 }
 
 export interface GapForecast {

@@ -1,6 +1,6 @@
 import type { PostMortem, TradeRecord, FlashReport } from '../engine/types';
 import type { RegistryEntry } from '../engine/strategyRegistry';
-import { proposalsFor, testStatus } from './learning';
+import { proposalsFor, testStatus, proposalTestPhrase } from './learning';
 import type { BrainSnapshot } from '../engine/brain';
 
 /**
@@ -23,6 +23,10 @@ export interface Brief {
   postMortem: PostMortem | null;
   proposals: ReturnType<typeof proposalsFor>;
   validated: ReturnType<typeof testStatus>;
+  /** The registry entry that a real test validated for this post-mortem. */
+  validatedFix: RegistryEntry | null;
+  /** Backend activity counters straight from the engine. */
+  backend: NonNullable<BrainSnapshot['backend']>;
 }
 
 /** Derives the backend briefing from the live snapshot. */
@@ -35,10 +39,14 @@ export function deriveBrief(snapshot: BrainSnapshot | null): Brief | null {
   const podStatus = promoted ? `${promoted.genome.codename} · ${promoted.status}` : null;
   const postMortem = snapshot.postMortems[0] ?? null;
   const proposals = postMortem ? proposalsFor(postMortem, snapshot.activeGenome) : [];
-  // Only a real, matching Flash Backtest can flip a proposal to verified.
+  // Only a real, matching Flash Backtest can flip a proposal to verified —
+  // and only the report that tested *that* rule counts.
   const validated = proposals.length
-    ? testStatus(proposals[0].testKeyword, snapshot.flashReports)
+    ? testStatus(proposalTestPhrase(proposals[0]), snapshot.flashReports)
     : undefined;
+  // The learning loop stores the report that actually proved the fix.
+  const validatedFix =
+    snapshot.registry.find((e) => e.postMortemId === postMortem?.id && e.verdict === 'validated') ?? null;
 
   const ranked = [...snapshot.registry].sort((a, b) => {
     const rank = (e: RegistryEntry) => (e.verdict === 'validated' ? 1 : 0);
@@ -59,5 +67,7 @@ export function deriveBrief(snapshot: BrainSnapshot | null): Brief | null {
     postMortem,
     proposals,
     validated,
+    validatedFix,
+    backend: snapshot.backend,
   };
 }

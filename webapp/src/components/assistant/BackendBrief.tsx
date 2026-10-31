@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import {
   TrendingUp, TrendingDown, FlaskConical, BrainCircuit, ArrowRight,
-  Activity, ShieldAlert, Wrench, Trophy,
+  Activity, ShieldAlert, Wrench, Trophy, Radar, RefreshCw,
 } from 'lucide-react';
 import { useStore } from '../../state/store';
 import { timeAgo, cn } from '../../utils/cn';
@@ -64,7 +64,12 @@ export function BackendBrief() {
   const brief = useMemo(() => deriveBrief(snapshot), [snapshot]);
   if (!snapshot || !brief) return null;
 
-  const { lastTrade, openPnl, report, genomeName, podStatus, postMortem, proposals, validated, bestStrategy, activeStrategy } = brief;
+  const {
+    lastTrade, openPnl, report, genomeName, podStatus, postMortem, proposals,
+    validated: testedProposal, validatedFix, bestStrategy, activeStrategy, backend,
+  } = brief;
+  const scan = backend.lastScan;
+  const validated = validatedFix?.report ?? testedProposal;
 
   return (
     <div className="space-y-1.5 px-3 pt-3">
@@ -74,7 +79,7 @@ export function BackendBrief() {
           Live backend
         </span>
         <span className="text-[0.55rem] dim ml-auto">
-          {snapshot.positions.length} open · {snapshot.recentTrades.length} closed
+          {backend.tradesOpened} engine trade{backend.tradesOpened === 1 ? '' : 's'} · {backend.checksRun} check{backend.checksRun === 1 ? '' : 's'} · {snapshot.positions.length} open
         </span>
       </div>
 
@@ -109,6 +114,34 @@ export function BackendBrief() {
         )}
       </Row>
 
+      {/* 1b — the autonomous universe sweep */}
+      <Row icon={Radar} label="Autonomous scan" tone="var(--accent)" onClick={() => setView('scanner')}>
+        {scan ? (
+          <>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-[0.62rem] font-mono">{scan.candidates} instruments swept</span>
+              {scan.best && (
+                <span className="text-[0.62rem] dim">
+                  · best <span className="text-[var(--accent)] font-semibold">{scan.best.score.toFixed(0)}%</span> {scan.best.symbol}
+                </span>
+              )}
+              <span className="text-[0.55rem] dim ml-auto">{timeAgo(scan.at)}</span>
+            </div>
+            <p className="text-[0.62rem] dim mt-0.5 leading-snug">
+              {scan.taken
+                ? `Setup qualified — Scanner ${scan.taken} paper position kholi.`
+                : scan.reason
+                  ? `Blocked: ${scan.reason}.`
+                  : scan.best
+                    ? `Koi setup 60% confluence gate ke upar nahi mila (best ${scan.best.score.toFixed(0)}%).`
+                    : 'Abhi tak koi confluence data nahi — pehla tick aane tak intezaar.'}
+            </p>
+          </>
+        ) : (
+          <p className="text-[0.62rem] dim leading-snug">Scanner shuru ho raha hai — pehla sweep abhi pending hai.</p>
+        )}
+      </Row>
+
       {/* 2 — strategy check */}
       <Row
         icon={FlaskConical}
@@ -137,6 +170,11 @@ export function BackendBrief() {
               <span className="text-[0.55rem] dim ml-auto">{timeAgo(report.at)}</span>
             </div>
             <p className="text-[0.62rem] dim mt-0.5 truncate">“{report.query}”</p>
+            <p className="text-[0.58rem] dim mt-0.5 leading-snug">
+              {report.auto
+                ? 'Backend ka apna cadence check · single-symbol flash test (poore portfolio ka proof nahi).'
+                : 'Manual flash test · single-symbol result.'}
+            </p>
           </>
         ) : (
           <>
@@ -224,9 +262,10 @@ export function BackendBrief() {
               <span className="text-[0.58rem] dim">{proposals.length} rule change(s) proposed</span>
               {validated ? (
                 <span
-                  className="text-[0.55rem] font-bold px-1.5 py-0.5 rounded-md ml-auto"
+                  className="text-[0.55rem] font-bold px-1.5 py-0.5 rounded-md ml-auto flex items-center gap-1"
                   style={{ color: 'var(--green)', background: 'rgba(29,184,134,0.14)' }}
                 >
+                  {validatedFix && <RefreshCw size={9} />}
                   VERIFIED {validated.recommendation}
                 </span>
               ) : (
@@ -242,6 +281,11 @@ export function BackendBrief() {
               <p className="text-[0.6rem] dim mt-1 leading-snug flex items-start gap-1">
                 <ArrowRight size={10} className="mt-0.5 shrink-0" />
                 <span className="truncate">{proposals[0].condition}: {proposals[0].proposed}</span>
+              </p>
+            )}
+            {validatedFix && validatedFix.changes.length > 0 && (
+              <p className="text-[0.6rem] dim mt-1 font-mono leading-snug">
+                Applied: {validatedFix.changes.map((c) => `${c.param} ${c.from}→${c.to}`).join(' · ')}
               </p>
             )}
           </>
