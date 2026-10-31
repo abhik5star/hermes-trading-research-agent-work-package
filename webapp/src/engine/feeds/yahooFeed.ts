@@ -45,6 +45,8 @@ interface YahooStream {
   price: number;
   volumeAvg20: number;
   book: OrderBook;
+  /** Previous session close — the reference for the daily change. */
+  prevClose?: number;
 }
 
 export class YahooFeed extends Emitter<FeedEvents> {
@@ -194,7 +196,7 @@ export class YahooFeed extends Emitter<FeedEvents> {
       const json = (await res.json()) as {
         chart: {
           result?: Array<{
-            meta?: { regularMarketPrice?: number };
+            meta?: { regularMarketPrice?: number; chartPreviousClose?: number; previousClose?: number };
             timestamp?: number[];
             indicators?: { quote?: Array<{ open?: number[]; high?: number[]; low?: number[]; close?: number[]; volume?: number[] }> };
           }>;
@@ -223,6 +225,8 @@ export class YahooFeed extends Emitter<FeedEvents> {
         stream.volumeAvg20 = stream.candles.slice(-20).reduce((a, c) => a + c.v, 0) / 20;
         const last = stream.candles.at(-1)!;
         stream.price = result.meta?.regularMarketPrice ?? last.c;
+        const prevClose = result.meta?.chartPreviousClose ?? result.meta?.previousClose;
+        if (typeof prevClose === 'number' && prevClose > 0) stream.prevClose = prevClose;
         this.lastMessageAt = Date.now();
         this.status = 'live';
         this.detail = `Live ${symbol} · ${stream.candles.length} bars`;
@@ -252,6 +256,17 @@ export class YahooFeed extends Emitter<FeedEvents> {
 
   getMark(symbol: string): number {
     return this.getPrice(symbol);
+  }
+
+  /** Change against the previous close in percent (Yahoo `chartPreviousClose`). */
+  changePct(symbol: string): number {
+    const s = this.streams.get(symbol);
+    if (!s) return 0;
+    const last = s.candles.at(-1)?.c ?? s.price;
+    if (s.prevClose) return ((last - s.prevClose) / s.prevClose) * 100;
+    const first = s.candles[0];
+    if (!first || !first.o) return 0;
+    return ((last - first.o) / first.o) * 100;
   }
 
   getAllMarks(): Record<string, number> {

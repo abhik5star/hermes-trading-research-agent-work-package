@@ -47,6 +47,8 @@ interface Stream {
   volumeAvg20: number;
   book: OrderBook;
   lastKlineOpen: number;
+  /** Binance's own 24 h change percentage (from the @ticker stream). */
+  changePct24h?: number;
 }
 
 export class BinanceWsFeed extends Emitter<FeedEvents> {
@@ -241,8 +243,11 @@ export class BinanceWsFeed extends Emitter<FeedEvents> {
     });
   }
 
-  private applyTicker(target: Stream, data: { c: string; v: string }): void {
+  private applyTicker(target: Stream, data: { c: string; v: string; P?: string }): void {
     target.price = Number(data.c);
+    // `P` is the exchange's own 24 h change percentage — the honest number
+    // to show next to a live price.
+    if (typeof data.P === 'string' && Number.isFinite(Number(data.P))) target.changePct24h = Number(data.P);
   }
 
   private applyDepth(target: Stream, data: { b: [string, string][]; a: [string, string][] }): void {
@@ -267,6 +272,17 @@ export class BinanceWsFeed extends Emitter<FeedEvents> {
 
   getMark(symbol: string): number {
     return this.getPrice(symbol);
+  }
+
+  /** 24 h change in percent (Binance `@ticker` `P`, else the bootstrapped window). */
+  changePct(symbol: string): number {
+    const s = this.streams.get(symbol);
+    if (!s) return 0;
+    if (typeof s.changePct24h === 'number') return s.changePct24h;
+    const first = s.candles[0];
+    const last = s.candles.at(-1);
+    if (!first || !last || !first.o) return 0;
+    return ((last.c - first.o) / first.o) * 100;
   }
 
   getAllMarks(): Record<string, number> {

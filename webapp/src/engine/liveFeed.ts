@@ -178,6 +178,19 @@ export class CompositeFeed extends Emitter<FeedEvents> {
     return this.simulated.getMark(symbol);
   }
 
+  /**
+   * Percentage change for a symbol, always taken from the adapter that is
+   * actually serving it — a live 24 h change for live symbols, the session
+   * window for simulated ones. Never mix a live price with a simulated base.
+   */
+  changePct(symbol: string): number {
+    if (this.live.has(symbol)) {
+      if (this.binance.hasData(symbol)) return this.binance.changePct(symbol);
+      if (this.yahoo.hasData(symbol)) return this.yahoo.changePct(symbol);
+    }
+    return this.simulated.changePct(symbol);
+  }
+
   getAllMarks(): Record<string, number> {
     return { ...this.simulated.getAllMarks(), ...this.binance.getAllMarks(), ...this.yahoo.getAllMarks() };
   }

@@ -244,6 +244,16 @@ export class SimulatedFeed extends Emitter<FeedEvents> implements FeedAdapter {
     return this.streams.get(symbol)?.price ?? this.marks[symbol] ?? 0;
   }
 
+  /** Change of the instrument over the loaded session window (in percent). */
+  changePct(symbol: string): number {
+    const s = this.streams.get(symbol);
+    if (!s || s.candles.length < 2) return 0;
+    const first = s.candles[0];
+    const last = s.candles.at(-1)!;
+    if (!first.o) return 0;
+    return ((last.c - first.o) / first.o) * 100;
+  }
+
   getAllMarks(): Record<string, number> {
     return { ...this.marks };
   }

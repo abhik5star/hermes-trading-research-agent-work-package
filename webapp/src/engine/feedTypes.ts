@@ -21,6 +21,12 @@ export interface FeedAdapter {
   getPrice(symbol: string): number;
   getBook(symbol: string): OrderBook;
   getMark(symbol: string): number;
+  /**
+   * Percentage change of the instrument over its reference window —
+   * 24 h for live adapters (Binance `P`, Yahoo previous close) and the
+   * loaded session window for the simulator. Always expressed in percent.
+   */
+  changePct(symbol: string): number;
   getAllMarks(): Record<string, number>;
   destroy(): void;
 }

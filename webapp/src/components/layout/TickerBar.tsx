@@ -20,36 +20,30 @@ const MODE_LABEL: Record<AppMode, string> = {
 const TICKER_EXTRA = ['RELIANCE.NS', 'TATASTEEL.NS', 'SOLUSDT', 'ETHUSDT'];
 
 function TickerPill({ symbol }: { symbol: string }) {
+  // Re-renders on every brain commit so the percentage keeps ticking.
   const snapshot = useStore((s) => s.snapshot);
-  const base = useRef<number | null>(null);
+  void snapshot;
   const inst = instrument(symbol);
-  const price = feed.getMark(symbol);
-  if (base.current === null) base.current = price;
-  const chg = base.current ? ((price - base.current) / base.current) * 100 : 0;
+  // The percentage always comes from the adapter that is actually serving the
+  // symbol (24 h for live, loaded session window for the simulator) — mixing a
+  // live price with a simulated base produced nonsense like -42 %.
+  const chg = feed.changePct(symbol);
   const up = chg >= 0;
   const dotColor = inst.exchange === 'NSE' ? '#ffc24b' : '#9d6bff';
-  // Indian symbols freeze while the exchange is shut — say so instead of
-  // pretending the price is moving.
-  const nseClosed = inst.exchange === 'NSE' && snapshot?.session?.state !== 'open';
-  void snapshot;
+  const source = feed.sourceFor(symbol);
+  const window = source === 'simulated' ? 'loaded session window (simulated)' : '24 h';
   return (
-    <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl card shrink-0">
-      <span className="w-2 h-2 rounded-full" style={{ background: dotColor, opacity: nseClosed ? 0.45 : 1 }} />
+    <div
+      className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl card shrink-0"
+      title={`${inst.display} · change over the ${window}`}
+    >
+      <span className="w-2 h-2 rounded-full" style={{ background: dotColor }} />
       <span className="text-[0.72rem] font-semibold whitespace-nowrap">{inst.display.replace(' Perpetual', '')}</span>
       <MorphNumber
         value={chg}
         format={(n) => `${n >= 0 ? '+' : ''}${n.toFixed(2)}%`}
         className={cn('text-[0.72rem] font-mono font-semibold', up ? 'text-[var(--green)]' : 'text-[var(--red)]')}
       />
-      {nseClosed && (
-        <span
-          className="text-[0.52rem] font-bold px-1.5 py-0.5 rounded-md"
-          style={{ color: 'var(--amber)', background: 'rgba(224,165,47,0.12)', border: '1px solid rgba(224,165,47,0.35)' }}
-          title={snapshot?.session?.label ?? 'Indian market is closed'}
-        >
-          CLOSED
-        </span>
-      )}
     </div>
   );
 }
@@ -207,8 +201,18 @@ function FontButtons() {
   );
 }
 
+const TICKER_SYMBOLS = [
+  ...FOCUS_SYMBOLS,
+  ...TICKER_EXTRA.filter((s) => !FOCUS_SYMBOLS.includes(s)),
+].slice(0, 7);
+
 export function TickerBar() {
-  const symbols = [...FOCUS_SYMBOLS, ...TICKER_EXTRA.filter((s) => !FOCUS_SYMBOLS.includes(s))].slice(0, 7);
+  const symbols = TICKER_SYMBOLS;
+  // Boot a real stream for every ticker symbol so each pill can show a
+  // genuine change instead of a placeholder 0.00 %.
+  useEffect(() => {
+    for (const s of symbols) feed.ensureStream(s);
+  }, [symbols]);
   return (
     <header className="flex items-center gap-3 flex-wrap">
       <div className="flex items-center gap-2.5 overflow-x-auto pb-0.5 flex-1 min-w-[280px]">
