@@ -70,6 +70,9 @@ export function BackendBrief() {
   } = brief;
   const scan = backend.lastScan;
   const validated = validatedFix?.report ?? testedProposal;
+  // A registry entry can be validated without a stored report — then we say
+  // VALIDATED, never a GO/NO-GO verdict we cannot show the numbers for.
+  const verdictText = validated?.recommendation ?? (validatedFix ? 'VALIDATED' : null);
 
   return (
     <div className="space-y-1.5 px-3 pt-3">
@@ -260,13 +263,13 @@ export function BackendBrief() {
             </p>
             <div className="flex items-center gap-1.5 mt-1.5">
               <span className="text-[0.58rem] dim">{proposals.length} rule change(s) proposed</span>
-              {validated ? (
+              {validated || validatedFix ? (
                 <span
                   className="text-[0.55rem] font-bold px-1.5 py-0.5 rounded-md ml-auto flex items-center gap-1"
                   style={{ color: 'var(--green)', background: 'rgba(29,184,134,0.14)' }}
                 >
                   {validatedFix && <RefreshCw size={9} />}
-                  VERIFIED {validated.recommendation}
+                  {validated?.recommendation ? `VERIFIED ${verdictText}` : 'VALIDATED'}
                 </span>
               ) : (
                 <span
